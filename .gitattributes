@@ -1,0 +1,30 @@
+# ============================================================
+# 行尾策略：本仓库以 LF 存储文本，避免 Windows / Linux 协作时
+# 出现"全文件变更"的伪 diff。
+# ============================================================
+
+# --- 二进制文件：禁止行尾转换，禁止文本 diff ---
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.gz     binary
+*.zip    binary
+*.xlsx   binary
+*.xls    binary
+*.db     binary
+*.sqlite binary
+
+# --- 文本文件：统一 LF ---
+*.py     text eol=lf
+*.md     text eol=lf
+*.sql    text eol=lf
+*.toml   text eol=lf
+*.txt    text eol=lf
+*.cfg    text eol=lf
+.env.example text eol=lf
+
+# --- 语言统计：避免把生成物算作源码 ---
+dashboard/echarts.min.js  linguist-vendored
+dashboard/index.html      linguist-generated
