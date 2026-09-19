@@ -1,7 +1,7 @@
 # usedcar-crawler 项目评审报告
 
 > 评审视角：大型互联网公司**测试主管 / 质量负责人**（关注"能不能上线、出事能不能定位、数据能不能信"）
-> 评审对象：`D:\Demo_Test\usedcar-crawler`（对照基准：`D:\Demo_Test\二手车爬虫项目计划书.md`）
+> 评审对象：`usedcar-crawler（仓库根）`（对照基准：`docs/project-plan.md`）
 > 评审时间：2026-09-19 · 评审环境：Windows / 独立隔离虚拟环境（Python 3.13.12，按 `requirements.txt` 现装）
 > 评审方式：**全部结论均现场实测**，不采信文档自述。核查脚本见 §6，可逐条复现。
 
@@ -67,8 +67,8 @@
 
 #### P2-4｜交付物混放，容易被误读
 
-- **现象**：工作区 `D:\Demo_Test\_removed_legacy_usedcar\` 内仍有 25 个带 `_demo` / `_selftest` 后缀的历史导出、`demo.db`、`demo_site/`（自建演示站点）与 `acceptance.db`（其中 6 条 `local_fixture_*` 数据）。
-- **影响**：如果整个 `D:\Demo_Test` 被打包、截图或上传，读者极易把 demo 数据与交付数据混为一谈——恰好踩在本项目最想避开的点上。建议移出工作区或加 `ARCHIVE-README` 明确标注。
+- **现象**：工作区 `同级遗留目录 _removed_legacy_usedcar\` 内仍有 25 个带 `_demo` / `_selftest` 后缀的历史导出、`demo.db`、`demo_site/`（自建演示站点）与 `acceptance.db`（其中 6 条 `local_fixture_*` 数据）。
+- **影响**：如果整个 `（工作区）` 被打包、截图或上传，读者极易把 demo 数据与交付数据混为一谈——恰好踩在本项目最想避开的点上。建议移出工作区或加 `ARCHIVE-README` 明确标注。
 
 #### P2-5｜小的一致性瑕疵
 
@@ -119,7 +119,7 @@ Grep "captured" src/  →  只有两处：detail_runner._replay_dir() 读它、c
 
 **证据 D｜工作区里留着"批量下载"的痕迹**
 
-- `D:\Demo_Test\_removed_legacy_usedcar\data\_count.txt` = `FILE_COUNT=95`，`_names.txt`（11:59:04 写入）列出 95 个 `.md` 文件名，**全部**是当前 103 个语料的子集（多出的 8 个在 11:59 之后补入）。
+- `同级遗留目录 _removed_legacy_usedcar\data\_count.txt` = `FILE_COUNT=95`，`_names.txt`（11:59:04 写入）列出 95 个 `.md` 文件名，**全部**是当前 103 个语料的子集（多出的 8 个在 11:59 之后补入）。
 - ⇒ 存在一个**项目外的批量下载步骤**，其脚本不在仓库内、文档未提及。
 
 **这意味着什么（面试风险）**：
@@ -265,28 +265,28 @@ parser = None if exc.code in (404, 410) else None   # 两个分支结果相同
 评审脚本（本次生成，可直接重跑）：
 
 ```
-D:\Demo_Test\.workbuddy\tmp\audit_raw.py       # 语料取证：generatedAt / mtime / ID 唯一性
-D:\Demo_Test\.workbuddy\tmp\audit_gaps.py      # 抓取节奏与时间戳分布
-D:\Demo_Test\.workbuddy\tmp\audit_snap.py      # 快照取证：15 验证页 vs 14 站点地图
-D:\Demo_Test\.workbuddy\tmp\audit_quality.py   # 数据分布与异常值
+.audit/audit_raw.py       # 语料取证：generatedAt / mtime / ID 唯一性
+.audit/audit_gaps.py      # 抓取节奏与时间戳分布
+.audit/audit_snap.py      # 快照取证：15 验证页 vs 14 站点地图
+.audit/audit_quality.py   # 数据分布与异常值
 ```
 
 关键命令：
 
 ```bash
 # 建立隔离环境（未污染项目 .venv）
-python -m venv C:/Users/22724/.workbuddy/binaries/python/envs/ucc-audit
-C:/Users/22724/.workbuddy/binaries/python/envs/ucc-audit/Scripts/python.exe -m pip install -r requirements.txt
-C:/Users/22724/.workbuddy/binaries/python/envs/ucc-audit/Scripts/python.exe -m pip install -e .
+python -m venv ./.audit-venv
+./.audit-venv/Scripts/python.exe -m pip install -r requirements.txt
+./.audit-venv/Scripts/python.exe -m pip install -e .
 
 # ① 测试（实测 229 passed）
-.../python.exe -m pytest -q
+./.audit-venv/Scripts/python.exe -m pytest -q
 
 # ② 溯源对账（实测 103/103、0 不符）
-.../python.exe tools/verify_against_raw.py
+./.audit-venv/Scripts/python.exe tools/verify_against_raw.py
 
 # ③ 合规复核（联网，与文档逐字一致）
-.../python.exe -m usedcar_crawler compliance --verify
+./.audit-venv/Scripts/python.exe -m usedcar_crawler compliance --verify
 
 # ④ 抓取足迹比对：data/raw 与 data/captured 的形态差异
 grep -rn "captured" src/          # 只有 replay 读，无写入方
