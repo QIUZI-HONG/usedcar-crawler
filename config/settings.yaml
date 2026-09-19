@@ -1,0 +1,68 @@
+# ============================================================
+# 全局运行配置。密钥一律走环境变量（UCC_ 前缀），不写在此文件。
+# 覆盖规则：环境变量 > .env > settings.yaml > 代码默认值
+# ============================================================
+
+app:
+  name: usedcar-crawler
+  env: dev                      # dev | prod
+  timezone: Asia/Shanghai
+
+logging:
+  level: INFO                   # DEBUG | INFO | WARNING | ERROR
+  json: false                   # true 时输出 JSON Lines（环境变量名：UCC_LOGGING__JSON_LINES）
+  dir: logs
+  retention_days: 14
+
+database:
+  # 开发默认 SQLite；生产改为 mysql+pymysql://...
+  url: sqlite:///./data/usedcar.db
+  echo: false
+  pool_size: 5
+  init_schema: true             # 启动时自动建表（幂等）
+
+fetch:
+  default_qps: 0.5              # 单源默认 QPS，务必保持低调
+  request_timeout: 30
+  max_retries: 3
+  backoff_base: 2.0             # 指数退避基数（秒）
+  respect_robots: true          # 铁律：置为 false 需要书面合规审批
+  # 三档降级顺序：能 HTTP 就不开浏览器
+  tier_ladder: [http, stealth, dynamic]
+  snapshot_raw: true            # 原始响应落盘留证
+  raw_dir: data/raw
+  proxy: ""                     # 环境变量 UCC_FETCH__PROXY 覆盖
+  # 自适应选择器（抗改版）
+  adaptive: true
+  adaptive_storage: .scrapling_checkpoints/selectors.db
+  # 字段缺失率超过阈值 -> 告警 + 快照（判定站点改版）
+  drift_missing_ratio: 0.3
+
+notify:
+  webhook_url: ""               # 企微/飞书机器人
+  on_events: [source_failed, schema_drift, compliance_blocked]
+
+storage:
+  batch_size: 500               # 入库批大小
+  mark_missing_deleted_after: 3 # 连续 N 次未出现则标记下架
+
+export:
+  dir: exports
+  formats: [xlsx, csv]
+  xlsx_max_rows: 50000          # 超过则自动改切 CSV
+
+schedule:
+  enabled: true
+  jobs:
+    - name: ev_daily_incr
+      line: ev
+      cron: "0 30 2 * * *"      # 每日 02:30
+      pages: 10
+    - name: fuel_daily_incr
+      line: fuel
+      cron: "0 50 2 * * *"      # 每日 02:50
+      pages: 10
+    - name: weekly_full
+      line: all
+      cron: "0 0 4 * * 6"       # 每周六 04:00 全量校准
+      pages: 50

@@ -1,0 +1,229 @@
+# ============================================================
+# 站点与选择器定义 —— 站点改版时只改本文件，不改代码。
+#
+# 字段说明：
+#   key             唯一标识，用于 CLI --source 与日志追踪
+#   line            ev(新能源) | fuel(燃油) | both(详情页源，一份数据覆盖两条线)
+#   enabled         false 表示不参与采集（站点禁止抓取或未完成校准）
+#   tier            取数档位：http | stealth | dynamic | fixture
+#   parser          复用哪个解析器：ev | fuel | guazi_md
+#   list_mode       page(列表页翻页) | api(JSON 接口) | sitemap(站点地图->详情页)
+#   url_template    {page} 为页码 / 第几个子地图
+#   detail_sample   sitemap 模式下每个子地图采样多少条详情页
+#   cooldown_seconds / max_cooldowns
+#                   命中风控后的冷却秒数与该任务允许的冷却次数（用尽即熔断）
+#   selectors       业务字段 -> CSS 选择器（仅列表页型源需要）
+#
+# ⚠️ 选择器需现场校准：
+#      python -m usedcar_crawler probe --source <key>
+#
+# ⚠️ 合规状态需定期复核：
+#      python -m usedcar_crawler compliance --verify
+# ============================================================
+
+defaults:
+  headers:
+    Accept-Language: zh-CN,zh;q=0.9
+  # 站点级 QPS 覆盖全局设置（该站更敏感就调更小）
+  qps: null
+
+sources:
+  # ============================================================
+  # 生产数据源（唯一实际启用的采集通道）
+  # ============================================================
+  # ✅ 瓜子二手车 · 车源详情（Markdown 通道）
+  #
+  # robots.txt 核查结论（2026-09-19 实测 https://www.guazi.com/robots.txt）：
+  #     User-agent: *
+  #     Allow: /
+  #     Allow: /llms.txt
+  #     Allow: /llms-full.txt
+  #     Allow: /car-detail/*.md
+  #     Allow: /*.md$
+  #     Disallow: /*?*
+  #     Sitemap: https://www.guazi.com/guazisou/cardetail/pc_cardetail_md_index.xml
+  #
+  # 本采集器【只访问 robots.txt 显式放行的 .md 通道】，不解析其受保护的 HTML 页面；
+  # 所有 URL 均为路径式、不含查询参数，满足 Disallow: /*?* 的约束。
+  # 该通道由平台自行编入站点地图，文件头自述 "瓜子二手车 GEO 优化内容"，
+  # 即平台面向机器读取主动发布的结构化内容，属于公开可访问信息。
+  - key: guazi_md
+    line: both
+    name: 瓜子二手车·车源详情(Markdown 通道)
+    enabled: true
+    tier: http
+    parser: guazi_md
+    base_url: https://www.guazi.com
+    url_template: https://www.guazi.com/guazisou/cardetail/pc_cardetail_md_{page}.xml
+    list_mode: sitemap
+    max_pages: 14          # 共 14 个子地图，每条约 1 万条车源（合计约 14 万）
+    detail_sample: 30      # 每张子地图等距采样 30 条
+    # 实测结论（2026-09-19）：该站的详情页通道存在【路径级】频率限制 —— 站点地图
+    # 可以持续快速拉取，但 /car-detail/*.md 在短时间内请求过多后会被挑战（返回验证页）。
+    # 因此这里取一个保守的速率，并对挑战做长冷却；宁慢勿猛，避免把可用通道打死。
+    qps: 0.2               # 5 秒/请求
+    cooldown_seconds: 150  # 命中挑战后的冷却时长（实测短冷却不足以恢复额度）
+    max_cooldowns: 4       # 冷却 4 次仍被拦即熔断，本次收手，改由下次增量任务继续
+    compliance:
+      robots_status: allowed
+      checked_at: "2026-09-19"
+      note: "robots.txt: User-Agent * -> Allow: /；显式 Allow: /car-detail/*.md 与 /*.md$；Sitemap 指向 pc_cardetail_md_index.xml。仅采集该显式放行的 .md 通道，URL 不含查询参数。"
+      allow_query_params: false
+
+  # ============================================================
+  # 因合规原因禁用的源（保留配置以留下合规决策的审计痕迹）
+  # ============================================================
+  # 🚫 懂车帝：robots.txt 为 "User-Agent: * / Disallow: /"，全面禁止抓取。
+  #    如需该站数据，请走官方 API / 数据合作渠道，而非爬虫。
+  - key: dongchedi_ev
+    line: ev
+    name: 懂车帝二手车·新能源（禁止抓取）
+    enabled: false
+    tier: http
+    parser: ev
+    base_url: https://www.dongchedi.com
+    url_template: https://www.dongchedi.com/usedcar/ev?page={page}
+    list_mode: page
+    max_pages: 50
+    qps: 0.4
+    compliance:
+      robots_status: disallowed
+      checked_at: "2026-09-19"
+      note: "robots.txt: User-Agent * -> Disallow: /（全站禁止）。需改用官方数据合作渠道。"
+    selectors:
+      card: "div[class*='car-list'] > div[class*='item']"
+      title: "h3::text"
+      price: "span[class*='price']::text"
+      reg_date: "span[class*='info']::text"
+      mileage: "span[class*='mileage']::text"
+    required: [title, price, reg_date, mileage]
+
+  # 🚫 汽车之家二手车(车168)：robots.txt 同为 "Disallow: /"，全面禁止抓取。
+  - key: autohome_fuel
+    line: fuel
+    name: 汽车之家二手车·燃油（禁止抓取）
+    enabled: false
+    tier: http
+    parser: fuel
+    base_url: https://www.che168.com
+    url_template: https://www.che168.com/china/list/?page={page}
+    list_mode: page
+    max_pages: 30
+    qps: 0.3
+    compliance:
+      robots_status: disallowed
+      checked_at: "2026-09-19"
+      note: "robots.txt: User-Agent * -> Disallow: /（全站禁止）。需改用官方数据合作渠道。"
+    selectors:
+      card: "ul[class*='viewlist'] > li"
+      title: "h2 a::text"
+      price: "div[class*='price'] b::text"
+      reg_date: "span[class*='year']::text"
+      mileage: "span[class*='km']::text"
+    required: [title, price, reg_date, mileage]
+
+  # ⏸️ 瓜子二手车 HTML 列表页通道：robots 允许，但是重型风控页面，
+  #    选择器需现场校准且收益低于已放行的 .md 通道，故暂不启用。
+  - key: guazi_fuel
+    line: fuel
+    name: 瓜子二手车·燃油列表页（HTML，暂未启用）
+    enabled: false
+    tier: stealth
+    parser: fuel
+    base_url: https://www.guazi.com
+    url_template: https://www.guazi.com/bj/buy/o{page}/
+    list_mode: page
+    max_pages: 50
+    qps: 0.25
+    compliance:
+      robots_status: allowed
+      checked_at: "2026-09-19"
+      note: "robots.txt: User-Agent * -> Allow: /，但 Disallow: /*?*（禁止 query 参数）。HTML 通道抗性较强，暂用 .md 通道替代。"
+      allow_query_params: false
+    selectors:
+      card: "li[class*='carlist'] , ul[class*='carlist'] > li"
+      title: "h2[class*='title']::text"
+      price: "div[class*='price'] span::text"
+      reg_date: "div[class*='info'] span::text"
+      mileage: "div[class*='info'] span::text"
+      link: "a::attr(href)"
+    required: [title, price, reg_date, mileage]
+
+  # ⏸️ 电动邦：robots.txt 返回 404（未声明规则），但选择器尚未现场校准，
+  #    未校准的选择器 = 未经验证的数据源，不进入默认采集范围。
+  - key: diandong_ev
+    line: ev
+    name: 电动邦·新能源行情（选择器未校准）
+    enabled: false
+    tier: http
+    parser: ev
+    base_url: https://www.diandong.com
+    url_template: https://www.diandong.com/ershouche?p={page}
+    list_mode: page
+    max_pages: 20
+    qps: 0.3
+    compliance:
+      robots_status: unknown
+      checked_at: ""
+      note: "robots.txt 返回 404（未声明规则）；选择器未现场校准，暂不启用。"
+    selectors:
+      card: "li[class*='car-item']"
+      title: "a[class*='title']::text"
+      price: "em[class*='price']::text"
+      reg_date: "span[class*='date']::text"
+      mileage: "span[class*='km']::text"
+      link: "a::attr(href)"
+    required: [title, price, reg_date, mileage]
+
+  # ============================================================
+  # 离线样本源（tier=fixture）
+  # 仅供 `selftest` / CI 在**零网络**环境下回归全链路逻辑使用。
+  # 这些源不参与任何真实增量任务（runner 自动选择时已排除 tier=fixture），
+  # 产出的数据也不会进入生产库 —— 避免演示数据与真实数据混池。
+  # ============================================================
+  - key: local_fixture_ev
+    line: ev
+    name: 本地样本·新能源（离线）
+    tier: fixture
+    parser: ev
+    base_url: local://fixtures
+    url_template: ev_list.html?page={page}
+    list_mode: page
+    max_pages: 1
+    selectors:
+      card: "div.car-item"
+      title: "h3.title::text"
+      price: "span.price::text"
+      new_car_price: "span.guide-price::text"
+      reg_date: "span.reg-date::text"
+      mileage: "span.mileage::text"
+      city: "span.city::text"
+      link: "a.detail::attr(href)"
+      range_info: "span.range::text"
+      battery_info: "span.battery::text"
+      battery_health: "span.soh::text"
+      fast_charge: "span.fast-charge::text"
+    required: [title, price, reg_date, mileage]
+
+  - key: local_fixture_fuel
+    line: fuel
+    name: 本地样本·燃油（离线）
+    tier: fixture
+    parser: fuel
+    base_url: local://fixtures
+    url_template: fuel_list.html?page={page}
+    list_mode: page
+    max_pages: 1
+    selectors:
+      card: "div.car-item"
+      title: "h3.title::text"
+      price: "span.price::text"
+      new_car_price: "span.guide-price::text"
+      reg_date: "span.reg-date::text"
+      mileage: "span.mileage::text"
+      city: "span.city::text"
+      link: "a.detail::attr(href)"
+      displacement: "span.displacement::text"
+      gearbox: "span.gearbox::text"
+      emission: "span.emission::text"
+    required: [title, price, reg_date, mileage]

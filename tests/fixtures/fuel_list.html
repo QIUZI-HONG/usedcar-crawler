@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>燃油二手车列表（离线样本）</title></head>
+<body>
+<!-- 离线夹具：验证燃油专属字段（排量/变速箱/排放）与脏数据清洗 -->
+<div class="car-list">
+
+  <div class="car-item">
+    <a class="detail" href="https://fixture.local/buy/200001.html">
+      <h3 class="title">大众 朗逸 2021款 1.5L 自动舒适版</h3>
+    </a>
+    <span class="price">6.80万</span>
+    <span class="guide-price">新车指导价 12.49万</span>
+    <span class="reg-date">2021年3月</span>
+    <span class="mileage">5.8万公里</span>
+    <span class="city">广州市</span>
+    <span class="displacement">1.5L</span>
+    <span class="gearbox">自动挡</span>
+    <span class="emission">国六</span>
+  </div>
+
+  <div class="car-item">
+    <a class="detail" href="https://fixture.local/buy/200002.html">
+      <h3 class="title">丰田 凯美瑞 2019款 2.0G 豪华版</h3>
+    </a>
+    <span class="price">13.20万</span>
+    <span class="guide-price">新车指导价 20.98万</span>
+    <span class="reg-date">2019-08 上牌</span>
+    <span class="mileage">9.6万公里</span>
+    <span class="city">佛山市</span>
+    <span class="displacement">2.0L</span>
+    <span class="gearbox">CVT无级变速</span>
+    <span class="emission">国六B</span>
+  </div>
+
+  <div class="car-item">
+    <a class="detail" href="https://fixture.local/buy/200003.html">
+      <h3 class="title">本田 思域 2018款 220TURBO 劲动版</h3>
+    </a>
+    <!-- 脏数据：价格缺失（写作「暂无」），模型校验应当拒收 -->
+    <span class="price">暂无</span>
+    <span class="reg-date">2018年5月</span>
+    <span class="mileage">12.4万公里</span>
+    <span class="city">东莞市</span>
+    <span class="displacement">1.5T</span>
+    <span class="gearbox">手动</span>
+    <span class="emission">国五</span>
+  </div>
+
+  <div class="car-item">
+    <a class="detail" href="https://fixture.local/buy/200004.html">
+      <h3 class="title">宝马 3系 2020款 325Li M运动套装</h3>
+    </a>
+    <span class="price">23.99万</span>
+    <span class="guide-price">新车指导价 35.39万</span>
+    <span class="reg-date">2020年11月</span>
+    <span class="mileage">4.1万公里</span>
+    <span class="city">深圳市</span>
+    <span class="displacement">2.0T</span>
+    <span class="gearbox">手自一体</span>
+    <span class="emission">国六A</span>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>二手车行情数据看板 · 新能源 / 燃油 双业务线</title>
+<style>
+:root{
+  --bg:#f4f6fa; --card:#fff; --ink:#16202e; --sub:#5b6a7d; --muted:#8b98a8;
+  --line:#e3e8f0; --line2:#eef2f7;
+  --blue:#1f6feb; --blue-soft:#eaf1ff;
+  --ev:#0e9f6e; --ev-soft:#e6f7f0;
+  --fuel:#e8710a; --fuel-soft:#fdf0e3;
+  --gold:#b8860b; --red:#d93025;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-size:14px;
+  font-family:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-decoration:none}
+header{background:linear-gradient(118deg,#132039 0%,#1c3355 52%,#28527d 100%);color:#fff;padding:26px 34px 22px}
+header h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.4px}
+header .sub{margin:9px 0 0;font-size:12.5px;color:#c3d4e8;line-height:1.75}
+header .sub b{color:#fff;font-weight:600}
+.badges{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.badge{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);border-radius:999px;
+  padding:4px 13px;font-size:11.5px;color:#e6eefb}
+main{max-width:1360px;margin:0 auto;padding:22px 22px 70px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:13px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;
+  box-shadow:0 1px 2px rgba(16,32,64,.05)}
+.kpi .v{font-size:25px;font-weight:700;line-height:1.15;letter-spacing:.3px}
+.kpi .v small{font-size:13px;font-weight:600;color:var(--sub);margin-left:2px}
+.kpi .l{font-size:12px;color:var(--sub);margin-top:5px}
+.kpi .s{font-size:11px;color:var(--muted);margin-top:6px}
+.kpi.ev .v{color:var(--ev)} .kpi.fuel .v{color:var(--fuel)}
+section{margin-top:28px}
+h2{font-size:15.5px;margin:0 0 14px;padding-left:11px;border-left:4px solid var(--blue);
+  display:flex;align-items:baseline;gap:10px;font-weight:700}
+h2 .hint{font-size:11.5px;color:var(--muted);font-weight:400;border:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px 12px;
+  box-shadow:0 1px 2px rgba(16,32,64,.05)}
+.panel h3{font-size:13.5px;margin:0 0 4px;color:#2c3a4f;font-weight:600}
+.panel .cap{font-size:11.5px;color:var(--muted);margin:0 0 8px;line-height:1.6}
+.chart{width:100%;height:290px}
+.chart.tall{height:330px}
+.chart.short{height:240px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:#f2f5fa;color:#41506a;font-weight:600;text-align:left;padding:9px 10px;
+  border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;z-index:2}
+td{padding:8px 10px;border-bottom:1px solid var(--line2);white-space:nowrap}
+tbody tr:hover{background:#f7fbff}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.tab{padding:7px 20px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;
+  font-size:13px;color:#3c4a5e;font-weight:600}
+.tab.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.tab.on.ev{background:var(--ev);border-color:var(--ev)}
+.tab.on.fuel{background:var(--fuel);border-color:var(--fuel)}
+.filters{display:flex;gap:9px;margin-bottom:11px;align-items:center;flex-wrap:wrap}
+.filters input,.filters select{padding:6px 11px;border:1px solid var(--line);border-radius:8px;
+  font-size:12.5px;background:#fff;color:var(--ink);outline:none}
+.filters input:focus,.filters select:focus{border-color:var(--blue)}
+.count{font-size:12px;color:var(--muted)}
+.scroll{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+.quality{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;font-size:12px}
+.qi{display:flex;align-items:center;gap:9px}
+.qi .qn{width:84px;color:#41506a;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qi .qt{flex:1;height:13px;background:#eef2f7;border-radius:7px;overflow:hidden}
+.qi .qf{height:100%;border-radius:7px;background:var(--ev)}
+.qi .qf.mid{background:#e8a33d} .qi .qf.low{background:var(--red)}
+.qi .qv{width:46px;text-align:right;color:var(--sub);flex:none;font-variant-numeric:tabular-nums}
+.cmp{display:flex;flex-direction:column;gap:11px}
+.cmprow{display:grid;grid-template-columns:130px 1fr 1fr;gap:12px;align-items:center;font-size:12.5px}
+.cmprow .cl{color:#41506a}
+.cmprow .cv{background:#f4f7fc;border-radius:8px;padding:7px 11px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+.cmprow .cv.ev{color:var(--ev);background:var(--ev-soft)}
+.cmprow .cv.fuel{color:var(--fuel);background:var(--fuel-soft)}
+.ok{color:var(--ev);font-weight:600}.bad{color:var(--red);font-weight:600}
+.warn{color:#e8a33d;font-weight:600}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--sub);margin-top:9px;flex-wrap:wrap}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:11px}
+.step{background:#fff;border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+.step .no{font-size:10.5px;color:var(--blue);font-weight:700;letter-spacing:.6px}
+.step .t{font-size:13px;font-weight:600;margin:5px 0 7px;color:#2c3a4f}
+.step .d{font-size:11.5px;color:var(--sub);line-height:1.65}
+footer{margin-top:32px;font-size:12px;color:var(--sub);line-height:1.9;
+  border-top:1px solid var(--line);padding-top:16px}
+footer b{color:#2c3a4f}
+.empty{padding:38px;text-align:center;color:var(--muted);font-size:13px}
+@media (max-width:1180px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr}
+  .quality{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>二手车行情数据看板 · 新能源 / 燃油 双业务线</h1>
+  <div class="sub">
+    数据来源：<b id="srcNote"></b>　·　采集引擎：<b>Scrapling</b>（Fetcher + 站点地图通道）　·　
+    生成时间：<b id="genAt"></b>　·　数据均为<b>真实抓取</b>，非模拟数据
+  </div>
+  <div class="badges">
+    <span class="badge">采集 → 解析 → 清洗 → 去重 → 入库 → 导出 全链路闭环</span>
+    <span class="badge">robots.txt 一票否决：仅采集显式放行通道</span>
+    <span class="badge">风控识别 · 冷却重试 · 熔断中止</span>
+    <span class="badge">指纹去重：重复采集幂等不产脏数据</span>
+    <span class="badge">三层数据可溯源：raw / ods / dwd</span>
+  </div>
+</header>
+
+<main>
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <h2>油电大盘对比 <span class="hint">两条业务线在同一口径下的并排指标</span></h2>
+    <div class="grid2">
+      <div class="panel">
+        <h3>核心指标对比</h3>
+        <p class="cap">新能源与燃油的估值主线不同：电车看电池与续航，油车看车龄与里程。同口径对比才能看出差异。</p>
+        <div class="cmp" id="cmp"></div>
+      </div>
+      <div class="panel">
+        <h3>平均保值率 / 平均售价对比</h3>
+        <p class="cap">保值率 = 二手售价 ÷ 新车指导价，反映两条线各自的贬值速度差异。</p>
+        <div class="chart" id="c_cmp"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>新能源看板 <span class="hint">电池类型 · 续航 · 健康度</span></h2>
+    <div class="grid4">
+      <div class="panel">
+        <h3>保值率 TOP 车型</h3>
+        <p class="cap">按品牌聚合的平均保值率（样本 ≥ 2 条），越高说明该品牌在二手市场越抗跌。</p>
+        <div class="chart" id="c_ev_ret"></div>
+      </div>
+      <div class="panel">
+        <h3>品牌均价排行</h3>
+        <p class="cap">各品牌平均售价（万元，样本 ≥ 3 条），反映二手市场的价格带分布。</p>
+        <div class="chart" id="c_ev_bp"></div>
+      </div>
+      <div class="panel">
+        <h3>续航 × 售价 散点</h3>
+        <p class="cap">仅统计<b>纯电续航</b>（增程/插混车的"综合续航"已剔除，避免口径混用）。</p>
+        <div class="chart" id="c_ev_scatter"></div>
+      </div>
+      <div class="panel">
+        <h3>电池类型与价格 / SOH 分布</h3>
+        <p class="cap">左轴为各电池类型均价，右轴为电池健康度（SOH）样本分布。</p>
+        <div class="chart" id="c_ev_bat"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>燃油看板 <span class="hint">价格 · 车龄 · 里程 · 排放</span></h2>
+    <div class="grid4">
+      <div class="panel">
+        <h3>售价区间分布</h3>
+        <p class="cap">燃油车按售价分箱统计，是判断主力成交价格带最直观的视图。</p>
+        <div class="chart" id="c_fu_price"></div>
+      </div>
+      <div class="panel">
+        <h3>车龄 × 里程 热力图</h3>
+        <p class="cap">颜色越深表示该「车龄段 × 里程段」的车源越集中，可识别主流车况组合。</p>
+        <div class="chart" id="c_fu_heat"></div>
+      </div>
+      <div class="panel">
+        <h3>品牌均价排行</h3>
+        <p class="cap">各品牌平均售价（万元，样本 ≥ 3 条）。</p>
+        <div class="chart" id="c_fu_bp"></div>
+      </div>
+      <div class="panel">
+        <h3>排放标准 / 变速箱分布</h3>
+        <p class="cap">排放标准直接影响限行城市的过户可行性，是燃油车独有的关键维度。</p>
+        <div class="chart" id="c_fu_emis"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>保值率与车龄 <span class="hint">贬值曲线</span></h2>
+    <div class="grid2">
+      <div class="panel">
+        <h3>车龄 → 平均保值率曲线</h3>
+        <p class="cap">横轴为车龄（年），纵轴为该车龄段的平均保值率。行业共识是车龄越长保值率越低，曲线若不符合这一常识，说明数据口径有问题。</p>
+        <div class="chart" id="c_curve"></div>
+      </div>
+      <div class="panel">
+        <h3>车龄分布</h3>
+        <p class="cap">车源在各车龄段的分布，反映市场的车源结构（准新车多还是老车多）。</p>
+        <div class="chart" id="c_age"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>车源明细 <span class="hint">可按品牌 / 城市 / 关键词筛选，点击「详情」跳转原始车源页</span></h2>
+    <div class="panel">
+      <div class="tabs">
+        <div class="tab on ev" data-line="ev">新能源 <span id="n_ev"></span></div>
+        <div class="tab fuel" data-line="fuel">燃油 <span id="n_fuel"></span></div>
+        <div class="count" id="shown" style="margin-left:auto"></div>
+      </div>
+      <div class="filters">
+        <input id="kw" placeholder="搜索品牌 / 车型 / 城市" style="width:230px">
+        <select id="brandSel"><option value="">全部品牌</option></select>
+        <select id="citySel"><option value="">全部城市</option></select>
+        <select id="sortSel">
+          <option value="price">按售价</option>
+          <option value="retention">按保值率</option>
+          <option value="mileage">按里程</option>
+        </select>
+      </div>
+      <div class="scroll"><table id="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>数据质量与采集日志 <span class="hint">字段完整率 · 运行记录 · 异常明细</span></h2>
+    <div class="grid2">
+      <div class="panel"><h3>新能源线字段完整率</h3><div class="quality" id="q_ev"></div></div>
+      <div class="panel"><h3>燃油线字段完整率</h3><div class="quality" id="q_fuel"></div></div>
+    </div>
+    <div class="panel" style="margin-top:15px">
+      <h3>采集任务运行记录</h3>
+      <p class="cap">每一次采集都留痕：抓到多少、入库多少、去重多少、被风控拦了多少、下架多少。
+        <b>「更新 + 去重」列就是幂等性的证据</b>——同一批车源重复采集只更新不新增。</p>
+      <div class="scroll" style="max-height:340px"><table>
+        <thead><tr><th>开始时间</th><th>业务线</th><th>数据源</th><th>状态</th><th>取页</th>
+        <th>抓到</th><th>解析</th><th>新增</th><th>更新</th><th>去重</th><th>异常</th><th>缺失率</th><th>耗时(s)</th><th>明细</th></tr></thead>
+        <tbody id="logs"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>这套系统是怎么跑的 <span class="hint">五步链路</span></h2>
+    <div class="steps">
+      <div class="step"><div class="no">STEP 1</div><div class="t">合规闸门</div>
+        <div class="d">先读目标站 robots.txt，逐一比对每一条待抓 URL；明确禁止的源直接拒绝执行并告警，不发一个请求。</div></div>
+      <div class="step"><div class="no">STEP 2</div><div class="t">发现详情页</div>
+        <div class="d">读站点地图与子地图，拿到车源详情页清单，等距抽样——全量约 14 万条，抽样既礼貌也让样本在城市/品牌上均匀铺开。</div></div>
+      <div class="step"><div class="no">STEP 3</div><div class="t">限速抓取</div>
+        <div class="d">令牌桶限速（单站 QPS ≤ 0.5）、指数退避重试、响应落盘留档；HTTP 200 也要校验内容结构，识别风控页。</div></div>
+      <div class="step"><div class="no">STEP 4</div><div class="t">解析与清洗</div>
+        <div class="d">解析结构化字段，把「28.47万元」「1.53万公里」「2025-09」统一成数字与年月，按能源类型分流到两条业务线。</div></div>
+      <div class="step"><div class="no">STEP 5</div><div class="t">校验入库导出</div>
+        <div class="d">模型逐条校验，价格缺失或非正数直接拒收；合法数据指纹去重后入库，并导出 Excel / CSV 供业务直接使用。</div></div>
+    </div>
+  </section>
+
+  <footer>
+    <b>数据合规声明：</b>本看板全部数据来自目标平台 robots.txt <b>显式放行</b>的车源详情通道
+    （<code>Allow: /car-detail/*.md</code>，并由其站点地图 <code>pc_cardetail_md_index.xml</code> 主动公开），
+    仅采集公开可访问信息，不解析受保护页面、不绕过登录与验证码、URL 不含查询参数；请求已限速并控制抓取频率，
+    仅用于个人学习与求职作品展示。<br>
+    <b>技术栈：</b>Scrapling（抓取 / 站点地图 / 解析）· Pydantic（数据契约与校验）· SQLAlchemy（存储，SQLite / MySQL 双兼容）·
+    APScheduler（定时调度）· pandas + openpyxl（导出）· ECharts（可视化）· pytest（单元测试）。
+  </footer>
+</main>
+
+<script src="echarts.min.js"></script>
+<script>
+if (typeof echarts === 'undefined') {
+  document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"><\/script>');
+}
+</script>
+<script>
+const D = /*__DATA__*/;
+const $ = id => document.getElementById(id);
+const charts = [];
+const PALETTE = ['#1f6feb','#0e9f6e','#e8710a','#7c5cd6','#c2410c','#0891b2','#b8860b','#be185d','#4d7c0f','#475569'];
+
+function mk(id, option) {
+  const el = $(id);
+  if (!el) return;
+  const c = echarts.init(el, null, {renderer: 'canvas'});
+  c.setOption(Object.assign({animationDuration: 520, textStyle: {fontFamily: 'Microsoft YaHei, PingFang SC, sans-serif'}}, option));
+  charts.push(c);
+}
+window.addEventListener('resize', () => charts.forEach(c => c.resize()));
+
+const AXIS = {
+  axisLine: {lineStyle: {color: '#d6dde8'}},
+  axisLabel: {color: '#5b6a7d', fontSize: 11},
+  splitLine: {lineStyle: {color: '#eef2f7'}},
+  axisTick: {show: false}
+};
+const TIP = {trigger: 'axis', axisPointer: {type: 'shadow'},
+  backgroundColor: 'rgba(22,32,46,.92)', borderWidth: 0, textStyle: {color: '#fff', fontSize: 12}};
+const TIP_ITEM = {trigger: 'item', backgroundColor: 'rgba(22,32,46,.92)', borderWidth: 0,
+  textStyle: {color: '#fff', fontSize: 12}};
+
+$('srcNote').textContent = D.source_note;
+$('genAt').textContent = D.generated_at;
+
+/* ---------------- KPI ---------------- */
+const K = D.kpi;
+$('kpis').innerHTML = [
+  ['车源总量', K.total, '条', `新能源 ${K.ev} · 燃油 ${K.fuel}`],
+  ['新能源', K.ev, '条', '电车：看电池与续航'],
+  ['燃油', K.fuel, '条', '油车：看车龄与里程'],
+  ['平均售价', K.avg_price, '万', `覆盖 ${K.brands} 个品牌`],
+  ['平均保值率', K.avg_retention != null ? (K.avg_retention * 100).toFixed(1) : '—', '%', '售价 ÷ 新车指导价'],
+  ['覆盖城市', K.cities, '个', '真实抓取自目标平台'],
+].map(([l, v, u, s], i) => `<div class="kpi ${i === 1 ? 'ev' : i === 2 ? 'fuel' : ''}">
+    <div class="v">${v == null ? '—' : v}${u === '%' ? '<small>%</small>' : u ? '<small>' + u + '</small>' : ''}</div>
+    <div class="l">${l}</div><div class="s">${s}</div></div>`).join('');
+
+/* ---------------- 油电对比 ---------------- */
+$('cmp').innerHTML = D.compare.map(r => `<div class="cmprow">
+  <div class="cl">${r.label}</div><div class="cv ev">${r.ev}</div><div class="cv fuel">${r.fuel}</div></div>`).join('');
+
+const evRet = D.ev.avg_retention != null ? +(D.ev.avg_retention * 100).toFixed(1) : 0;
+const fuRet = D.fuel.avg_retention != null ? +(D.fuel.avg_retention * 100).toFixed(1) : 0;
+const evP = D.ev.avg_price || 0, fuP = D.fuel.avg_price || 0;
+mk('c_cmp', {
+  tooltip: TIP,
+  legend: {data: ['平均保值率(%)', '平均售价(万元)'], bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}},
+  grid: {left: 52, right: 20, top: 24, bottom: 44},
+  xAxis: Object.assign({type: 'category', data: ['新能源', '燃油']}, AXIS),
+  yAxis: Object.assign({type: 'value'}, AXIS),
+  series: [
+    {name: '平均保值率(%)', type: 'bar', data: [evRet, fuRet], barWidth: 34,
+      itemStyle: {borderRadius: [6, 6, 0, 0], color: p => p.dataIndex ? '#f0a35e' : '#4cc79a'},
+      label: {show: true, position: 'top', formatter: '{c}%', color: '#41506a', fontSize: 11}},
+    {name: '平均售价(万元)', type: 'line', data: [evP, fuP], symbolSize: 9,
+      lineStyle: {width: 3, color: '#1f6feb'}, itemStyle: {color: '#1f6feb'},
+      label: {show: true, position: 'bottom', formatter: '{c}万', color: '#1f6feb', fontSize: 11}}
+  ]
+});
+
+/* ---------------- 通用图表工厂 ---------------- */
+function hbar(id, rows, color, unit, dec) {
+  if (!rows || !rows.length) { $(id).innerHTML = '<div class="empty">暂无足够样本</div>'; return; }
+  const names = rows.map(r => r.name).reverse();
+  const vals = rows.map(r => r.avg ?? r.n).reverse();
+  const ns = rows.map(r => r.n).reverse();
+  mk(id, {
+    tooltip: Object.assign({}, TIP, {formatter: p => `${p[0].name}<br/>${p[0].marker}${unit}：<b>${p[0].value}</b>　样本 ${ns[p[0].dataIndex]} 条`}),
+    grid: {left: 96, right: 52, top: 10, bottom: 14},
+    xAxis: Object.assign({type: 'value'}, AXIS),
+    yAxis: Object.assign({type: 'category', data: names}, AXIS, {splitLine: {show: false}}),
+    series: [{type: 'bar', data: vals, barWidth: '58%',
+      itemStyle: {borderRadius: [0, 5, 5, 0], color: color},
+      label: {show: true, position: 'right', fontSize: 11, color: '#41506a',
+        formatter: p => (dec ? (+p.value).toFixed(dec) : p.value)}}]
+  });
+}
+
+function distBar(id, rows, color) {
+  if (!rows || !rows.length || !rows.some(r => r.n)) { $(id).innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  mk(id, {
+    tooltip: TIP,
+    grid: {left: 46, right: 16, top: 24, bottom: 46},
+    xAxis: Object.assign({type: 'category', data: rows.map(r => r.name),
+      axisLabel: {color: '#5b6a7d', fontSize: 10.5, interval: 0, rotate: rows.length > 6 ? 26 : 0}}, AXIS),
+    yAxis: Object.assign({type: 'value', name: '车源数', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+    series: [{type: 'bar', data: rows.map(r => r.n), barWidth: '56%',
+      itemStyle: {borderRadius: [5, 5, 0, 0],
+        color: {type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{offset: 0, color: color[0]}, {offset: 1, color: color[1]}]}},
+      label: {show: true, position: 'top', fontSize: 11, color: '#41506a'}}]
+  });
+}
+
+function donut(id, rows, unit) {
+  if (!rows || !rows.length) { $(id).innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  mk(id, {
+    tooltip: Object.assign({}, TIP_ITEM, {formatter: p => `${p.marker}${p.name}<br/>${unit}：<b>${p.value}</b>（${p.percent}%）`}),
+    legend: {bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}, itemWidth: 10, itemHeight: 10},
+    color: PALETTE,
+    series: [{type: 'pie', radius: ['42%', '68%'], center: ['50%', '44%'], avoidLabelOverlap: true,
+      itemStyle: {borderColor: '#fff', borderWidth: 2},
+      label: {show: true, formatter: '{b}\n{c}', fontSize: 10.5, color: '#41506a'},
+      labelLine: {length: 8, length2: 8},
+      data: rows.map(r => ({name: r.name, value: r.n}))}]
+  });
+}
+
+/* ---------------- 新能源 ---------------- */
+hbar('c_ev_ret', D.ev.brand_retention_rank, '#0e9f6e', '保值率', 1);
+hbar('c_ev_bp', D.ev.brand_price_rank, '#1f6feb', '均价(万)', 2);
+
+const sc = D.ev.range_price_scatter || [];
+if (sc.length) {
+  mk('c_ev_scatter', {
+    tooltip: Object.assign({}, TIP_ITEM, {formatter: p => `<b>${p.value[2]} ${p.value[3]}</b><br/>纯电续航：${p.value[0]} km<br/>售价：${p.value[1]} 万`}),
+    grid: {left: 52, right: 18, top: 16, bottom: 44},
+    xAxis: Object.assign({type: 'value', name: '纯电续航 (km)', nameLocation: 'middle', nameGap: 26,
+      nameTextStyle: {color: '#5b6a7d', fontSize: 11}}, AXIS),
+    yAxis: Object.assign({type: 'value', name: '售价 (万元)', nameTextStyle: {color: '#5b6a7d', fontSize: 11}}, AXIS),
+    series: [{type: 'scatter', data: sc, symbolSize: 9,
+      itemStyle: {color: 'rgba(14,159,110,.66)', borderColor: '#0e9f6e', borderWidth: 1},
+      emphasis: {itemStyle: {color: '#0e9f6e', borderWidth: 2}}}]
+  });
+} else {
+  $('c_ev_scatter').innerHTML = '<div class="empty">样本中未提取到纯电续航数据<br/><span style="font-size:11px">增程/插混车型的综合续航已按口径剔除</span></div>';
+}
+
+const bat = D.ev.battery_price || [];
+if (bat.length) {
+  mk('c_ev_bat', {
+    tooltip: TIP,
+    legend: {data: ['均价(万元)', 'SOH均值(%)'], bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}},
+    grid: {left: 50, right: 52, top: 20, bottom: 46},
+    xAxis: Object.assign({type: 'category', data: bat.map(b => b.name),
+      axisLabel: {color: '#5b6a7d', fontSize: 10, interval: 0, rotate: bat.length > 3 ? 20 : 0}}, AXIS),
+    yAxis: [
+      Object.assign({type: 'value', name: '万元', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+      Object.assign({type: 'value', name: 'SOH%', max: 100, nameTextStyle: {color: '#8b98a8', fontSize: 11}},
+        AXIS, {splitLine: {show: false}})
+    ],
+    series: [
+      {name: '均价(万元)', type: 'bar', data: bat.map(b => b.avg), barWidth: '44%',
+        itemStyle: {borderRadius: [5, 5, 0, 0], color: '#0e9f6e'},
+        label: {show: true, position: 'top', fontSize: 11, color: '#41506a'}},
+      {name: 'SOH均值(%)', type: 'line', yAxisIndex: 1, symbolSize: 8,
+        data: bat.map(() => D.ev.health_avg ? +D.ev.health_avg.toFixed(1) : null),
+        lineStyle: {width: 2.5, type: 'dashed', color: '#b8860b'},
+        itemStyle: {color: '#b8860b'},
+        label: {show: true, position: 'top', fontSize: 11, color: '#b8860b', formatter: '{c}%'}}
+    ]
+  });
+} else {
+  $('c_ev_bat').innerHTML = '<div class="empty">样本中未披露电池类型</div>';
+}
+
+/* ---------------- 燃油 ---------------- */
+distBar('c_fu_price', D.fuel.price_dist, ['#f5a95f', '#e8710a']);
+hbar('c_fu_bp', D.fuel.brand_price_rank, '#e8710a', '均价(万)', 2);
+
+const hm = D.fuel.heatmap || {x: [], y: [], data: []};
+if (hm.data && hm.data.length) {
+  const maxN = Math.max(...hm.data.map(d => d[2]));
+  mk('c_fu_heat', {
+    tooltip: Object.assign({}, TIP_ITEM,
+      {formatter: p => `${hm.y[p.value[1]]} · ${hm.x[p.value[0]]}<br/>车源数：<b>${p.value[2]}</b>`}),
+    grid: {left: 74, right: 22, top: 14, bottom: 62},
+    xAxis: Object.assign({type: 'category', data: hm.x,
+      axisLabel: {color: '#5b6a7d', fontSize: 10, interval: 0, rotate: 24}}, AXIS, {splitLine: {show: false}}),
+    yAxis: Object.assign({type: 'category', data: hm.y,
+      axisLabel: {color: '#5b6a7d', fontSize: 10.5}}, AXIS, {splitLine: {show: false}}),
+    visualMap: {min: 0, max: maxN, calculable: false, orient: 'horizontal', left: 'center', bottom: 4,
+      itemWidth: 11, itemHeight: 90, textStyle: {color: '#5b6a7d', fontSize: 10.5},
+      inRange: {color: ['#fdf3e7', '#f7c88f', '#ef9a4b', '#d96f10', '#a5500a']}},
+    series: [{type: 'heatmap', data: hm.data,
+      itemStyle: {borderColor: '#fff', borderWidth: 2, borderRadius: 3},
+      label: {show: true, fontSize: 10.5, color: '#3c3c3c', formatter: p => p.value[2] || ''}}]
+  });
+} else {
+  $('c_fu_heat').innerHTML = '<div class="empty">样本中车龄或里程缺失，无法构建热力图</div>';
+}
+
+const em = (D.fuel.emission_dist || []).slice(0, 6);
+const gb = (D.fuel.gearbox_dist || []).slice(0, 4);
+if (em.length || gb.length) {
+  mk('c_fu_emis', {
+    tooltip: TIP,
+    legend: {data: ['排放标准', '变速箱'], bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}},
+    grid: {left: 48, right: 18, top: 22, bottom: 52},
+    xAxis: Object.assign({type: 'category', data: em.map(e => e.name),
+      axisLabel: {color: '#5b6a7d', fontSize: 10.5, interval: 0, rotate: em.length > 4 ? 22 : 0}}, AXIS),
+    yAxis: Object.assign({type: 'value', name: '车源数', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+    series: [
+      {name: '排放标准', type: 'bar', data: em.map(e => e.n), barWidth: '46%',
+        itemStyle: {borderRadius: [5, 5, 0, 0], color: '#e8710a'},
+        label: {show: true, position: 'top', fontSize: 11, color: '#41506a'}},
+      {name: '变速箱', type: 'line', symbolSize: 8, smooth: true,
+        data: gb.map(g => g.n),
+        lineStyle: {width: 2.5, color: '#7c5cd6'}, itemStyle: {color: '#7c5cd6'}}
+    ]
+  });
+} else {
+  $('c_fu_emis').innerHTML = '<div class="empty">暂无数据</div>';
+}
+
+/* ---------------- 保值率曲线 ---------------- */
+function curve(id, rows, color) {
+  if (!rows || !rows.length) { $(id).innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  mk(id, {
+    tooltip: Object.assign({}, TIP, {formatter: p => `车龄 <b>${p[0].axisValue} 年</b><br/>${p[0].marker}平均保值率：<b>${p[0].value}%</b>`}),
+    grid: {left: 48, right: 22, top: 22, bottom: 40},
+    xAxis: Object.assign({type: 'category', data: rows.map(r => r.age),
+      axisLabel: {color: '#5b6a7d', fontSize: 11}}, AXIS, {boundaryGap: false}),
+    yAxis: Object.assign({type: 'value', name: '保值率 %', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+    series: [{type: 'line', data: rows.map(r => r.rate), smooth: true, symbolSize: 8,
+      lineStyle: {width: 3, color: color},
+      itemStyle: {color: color, borderColor: '#fff', borderWidth: 2},
+      areaStyle: {color: {type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+        colorStops: [{offset: 0, color: color + '55'}, {offset: 1, color: color + '05'}]}},
+      label: {show: true, fontSize: 11, color: '#41506a', formatter: '{c}%'}}]
+  });
+}
+
+mk('c_curve', {
+  tooltip: TIP,
+  legend: {data: ['新能源', '燃油'], bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}},
+  grid: {left: 48, right: 22, top: 22, bottom: 46},
+  xAxis: Object.assign({type: 'category',
+    data: [...new Set([...(D.ev.age_retention || []), ...(D.fuel.age_retention || [])].map(r => r.age))].sort((a, b) => a - b),
+    name: '车龄 (年)', nameLocation: 'middle', nameGap: 26, nameTextStyle: {color: '#5b6a7d', fontSize: 11},
+    axisLabel: {color: '#5b6a7d', fontSize: 11}}, AXIS, {boundaryGap: false}),
+  yAxis: Object.assign({type: 'value', name: '保值率 %', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+  series: [
+    {name: '新能源', type: 'line', smooth: true, symbolSize: 7, connectNulls: true,
+      data: (D.ev.age_retention || []).map(r => r.rate),
+      lineStyle: {width: 3, color: '#0e9f6e'}, itemStyle: {color: '#0e9f6e'}},
+    {name: '燃油', type: 'line', smooth: true, symbolSize: 7, connectNulls: true,
+      data: (D.fuel.age_retention || []).map(r => r.rate),
+      lineStyle: {width: 3, color: '#e8710a'}, itemStyle: {color: '#e8710a'}}
+  ]
+});
+
+/* 车龄分布：两条线并排 */
+const ageLabels = D.fuel.age_dist.map(r => r.name);
+const ageMap = (rows) => Object.fromEntries(rows.map(r => [r.name, r.n]));
+const evAge = ageMap(D.ev.age_dist), fuAge = ageMap(D.fuel.age_dist);
+mk('c_age', {
+  tooltip: TIP,
+  legend: {data: ['新能源', '燃油'], bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}},
+  grid: {left: 48, right: 20, top: 20, bottom: 52},
+  xAxis: Object.assign({type: 'category', data: ageLabels,
+    axisLabel: {color: '#5b6a7d', fontSize: 10.5, interval: 0, rotate: 22}}, AXIS),
+  yAxis: Object.assign({type: 'value', name: '车源数', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+  series: [
+    {name: '新能源', type: 'bar', data: ageLabels.map(l => evAge[l] || 0), barWidth: '34%',
+      itemStyle: {borderRadius: [4, 4, 0, 0], color: '#0e9f6e'}},
+    {name: '燃油', type: 'bar', data: ageLabels.map(l => fuAge[l] || 0), barWidth: '34%',
+      itemStyle: {borderRadius: [4, 4, 0, 0], color: '#e8710a'}}
+  ]
+});
+
+/* ---------------- 明细表 ---------------- */
+const COLS = {
+  ev: [['品牌','brand'],['车型','model'],['售价(万)','price'],['新车指导价(万)','new_price'],
+       ['保值率','retention'],['上牌','reg'],['里程(km)','mileage'],['城市','city'],
+       ['纯电续航(km)','range'],['口径','range_std'],['电池','battery'],['SOH(%)','soh'],['过户','transfer']],
+  fuel: [['品牌','brand'],['车型','model'],['售价(万)','price'],['新车指导价(万)','new_price'],
+         ['保值率','retention'],['上牌','reg'],['里程(km)','mileage'],['城市','city'],
+         ['排量(L)','disp'],['变速箱','gearbox'],['排放','emission'],['过户','transfer']]
+};
+let line = 'ev';
+const fmtN = v => (v == null || v === '') ? '—' : Number(v).toLocaleString();
+const fmtF = (v, d) => (v == null || v === '') ? '—' : Number(v).toFixed(d);
+
+function fillSelects() {
+  const rows = D[line + '_rows'];
+  const bs = [...new Set(rows.map(r => r.brand))].filter(b => b && b !== '—').sort();
+  const cs = [...new Set(rows.map(r => r.city))].filter(c => c && c !== '—').sort();
+  $('brandSel').innerHTML = '<option value="">全部品牌</option>' + bs.map(b => `<option>${b}</option>`).join('');
+  $('citySel').innerHTML = '<option value="">全部城市</option>' + cs.map(c => `<option>${c}</option>`).join('');
+}
+
+function renderTable() {
+  const rows = D[line + '_rows'];
+  const kw = $('kw').value.trim().toLowerCase();
+  const brand = $('brandSel').value, city = $('citySel').value, sort = $('sortSel').value;
+  let list = rows.filter(r => (!kw || (r.brand + r.model + r.city + r.title).toLowerCase().includes(kw))
+    && (!brand || r.brand === brand) && (!city || r.city === city));
+  const key = sort === 'retention' ? 'retention' : sort === 'mileage' ? 'mileage' : 'price';
+  list = list.slice().sort((a, b) => (b[key] ?? -1) - (a[key] ?? -1));
+
+  $('thead').innerHTML = '<tr>' + COLS[line].map(([t]) => `<th>${t}</th>`).join('') + '<th>原始车源</th></tr>';
+  if (!list.length) {
+    $('tbody').innerHTML = `<tr><td colspan="${COLS[line].length + 1}"><div class="empty">没有符合条件的车源</div></td></tr>`;
+  } else {
+    $('tbody').innerHTML = list.map(r => '<tr>' + COLS[line].map(([, k]) => {
+      let v = r[k];
+      if (k === 'retention') v = v == null ? '—' : v.toFixed(1) + '%';
+      else if (k === 'mileage') v = fmtN(v);
+      else if (k === 'price' || k === 'new_price') v = fmtF(v, 2);
+      else if (k === 'soh') v = fmtF(v, 1);
+      else if (k === 'disp') v = fmtF(v, 1);
+      else if (k === 'range') v = fmtN(v);
+      const cls = (k === 'price' || k === 'mileage' || k === 'new_price' || k === 'soh' || k === 'range') ? ' class="num"' : '';
+      return `<td${cls}>${v == null || v === '' ? '—' : v}</td>`;
+    }).join('') + `<td>${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">查看 ↗</a>` : '—'}</td>` + '</tr>').join('');
+  }
+  $('shown').textContent = `显示 ${list.length} / ${rows.length} 条`;
+}
+
+$('n_ev').textContent = '(' + D.ev_rows.length + ')';
+$('n_fuel').textContent = '(' + D.fuel_rows.length + ')';
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  t.classList.add('on'); line = t.dataset.line;
+  $('kw').value = ''; fillSelects(); renderTable();
+});
+$('kw').oninput = renderTable;
+$('brandSel').onchange = renderTable;
+$('citySel').onchange = renderTable;
+$('sortSel').onchange = renderTable;
+fillSelects(); renderTable();
+
+/* ---------------- 数据质量 ---------------- */
+function quality(id, rows) {
+  $(id).innerHTML = rows.map(q => {
+    const cls = q.rate >= 90 ? '' : (q.rate >= 50 ? 'mid' : 'low');
+    return `<div class="qi"><div class="qn" title="${q.label}">${q.label}</div>
+      <div class="qt"><div class="qf ${cls}" style="width:${Math.max(q.rate, 1.2)}%"></div></div>
+      <div class="qv">${q.rate}%</div></div>`;
+  }).join('');
+}
+quality('q_ev', D.ev.field_completeness);
+quality('q_fuel', D.fuel.field_completeness);
+
+$('logs').innerHTML = D.logs.map(l => {
+  const st = l.status === 'success' ? '<span class="ok">成功</span>'
+    : l.status === 'partial' ? '<span class="warn">部分</span>' : '<span class="bad">失败</span>';
+  return `<tr><td>${l.time}</td><td>${l.line === 'ev' ? '新能源' : l.line === 'fuel' ? '燃油' : '双线'}</td>
+    <td>${l.source}</td><td>${st}</td><td class="num">${l.maps}</td><td class="num">${l.fetched}</td>
+    <td class="num">${l.parsed}</td><td class="num">${l.new}</td><td class="num">${l.updated}</td>
+    <td class="num">${l.dup}</td><td class="num">${l.err}</td><td class="num">${l.missing}%</td>
+    <td class="num">${l.seconds ?? '—'}</td>
+    <td style="white-space:normal;max-width:420px;color:#5b6a7d;font-size:11.5px">${l.detail || '—'}</td></tr>`;
+}).join('') || '<tr><td colspan="14"><div class="empty">暂无采集日志</div></td></tr>';
+</script>
+</body>
+</html>

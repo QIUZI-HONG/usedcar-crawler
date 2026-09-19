@@ -1,0 +1,21 @@
+# 采集层
+scrapling[fetchers]>=0.3
+tenacity>=8.3
+
+# 配置与校验
+pydantic>=2.6
+pydantic-settings>=2.2
+PyYAML>=6.0
+
+# 存储与导出
+SQLAlchemy>=2.0
+pandas>=2.2
+openpyxl>=3.1
+PyMySQL>=1.1            # MySQL 生产环境驱动（SQLite 默认无需）
+
+# 调度
+APScheduler>=3.10
+
+# 测试
+pytest>=8.0
+pytest-cov>=5.0

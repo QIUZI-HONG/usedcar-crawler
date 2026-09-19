@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>新能源二手车列表（离线样本）</title></head>
+<body>
+<!-- 离线夹具：刻意混入脏数据（面议价格、缺失里程、口径混写），用于验证清洗与校验链路 -->
+<div class="car-list">
+
+  <div class="car-item">
+    <a class="detail" href="https://fixture.local/usedcar/100001.html">
+      <h3 class="title">比亚迪 汉EV 2022款 605KM 尊享型</h3>
+    </a>
+    <span class="price">￥<em>15.98</em>万</span>
+    <span class="guide-price">新车指导价 20.98万</span>
+    <span class="reg-date">2022年6月</span>
+    <span class="mileage">3.2万公里</span>
+    <span class="city">广州市</span>
+    <span class="battery">电池类型：三元锂电池</span>
+    <span class="range">续航 CLTC 605km</span>
+    <span class="soh">电池健康度 91.5%</span>
+    <span class="fast-charge">快充 110kW</span>
+  </div>
+
+  <div class="car-item">
+    <a class="detail" href="https://fixture.local/usedcar/100002.html">
+      <h3 class="title">特斯拉 Model 3 2021标准续航后驱版</h3>
+    </a>
+    <!-- 脏数据：价格为「面议」，模型校验应当拒收 -->
+    <span class="price">面议</span>
+    <span class="guide-price">新车指导价 23.19万</span>
+    <span class="reg-date">2021-03 上牌</span>
+    <span class="mileage">5.8万km</span>
+    <span class="city">深圳市</span>
+    <span class="battery">磷酸铁锂电池</span>
+    <span class="range">NEDC续航 468公里</span>
+    <span class="soh">SOH 88%</span>
+  </div>
+
+  <div class="car-item">
+    <a class="detail" href="https://fixture.local/usedcar/100003.html">
+      <h3 class="title">小鹏 P7 2023款 706G 智享版</h3>
+    </a>
+    <span class="price">18.80万</span>
+    <span class="guide-price">新车指导价 24.99万</span>
+    <span class="reg-date">2023年1月上牌</span>
+    <!-- 脏数据：该卡片缺失里程字段 -->
+    <span class="city">杭州市</span>
+    <span class="battery">三元锂</span>
+    <span class="range">CLTC 706 公里</span>
+  </div>
+
+  <div class="car-item">
+    <a class="detail" href="https://fixture.local/usedcar/100004.html">
+      <h3 class="title">蔚来 ES6 2022款 75kWh 运动版</h3>
+    </a>
+    <span class="price">26.50 万元</span>
+    <span class="guide-price">新车指导价 38.60万</span>
+    <span class="reg-date">2022/09</span>
+    <span class="mileage">0.8万公里</span>
+    <span class="city">上海市</span>
+    <span class="range">续航 500km</span>
+  </div>
+
+</div>
+</body>
+</html>

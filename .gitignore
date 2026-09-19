@@ -1,0 +1,28 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ---- 项目运行时数据（原始快照 / 数据库 / 导出文件）----
+data/
+exports/
+logs/
+.scrapling_checkpoints/
+
+# ---- 凭据 ----
+.env
+*.local.yaml
+
+# ---- 编辑器 / 工具 ----
+.idea/
+.vscode/
+*.db
+.workbuddy/

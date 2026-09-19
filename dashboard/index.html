@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>二手车行情数据看板 · 新能源 / 燃油 双业务线</title>
+<style>
+:root{
+  --bg:#f4f6fa; --card:#fff; --ink:#16202e; --sub:#5b6a7d; --muted:#8b98a8;
+  --line:#e3e8f0; --line2:#eef2f7;
+  --blue:#1f6feb; --blue-soft:#eaf1ff;
+  --ev:#0e9f6e; --ev-soft:#e6f7f0;
+  --fuel:#e8710a; --fuel-soft:#fdf0e3;
+  --gold:#b8860b; --red:#d93025;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-size:14px;
+  font-family:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-decoration:none}
+header{background:linear-gradient(118deg,#132039 0%,#1c3355 52%,#28527d 100%);color:#fff;padding:26px 34px 22px}
+header h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.4px}
+header .sub{margin:9px 0 0;font-size:12.5px;color:#c3d4e8;line-height:1.75}
+header .sub b{color:#fff;font-weight:600}
+.badges{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.badge{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);border-radius:999px;
+  padding:4px 13px;font-size:11.5px;color:#e6eefb}
+main{max-width:1360px;margin:0 auto;padding:22px 22px 70px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:13px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;
+  box-shadow:0 1px 2px rgba(16,32,64,.05)}
+.kpi .v{font-size:25px;font-weight:700;line-height:1.15;letter-spacing:.3px}
+.kpi .v small{font-size:13px;font-weight:600;color:var(--sub);margin-left:2px}
+.kpi .l{font-size:12px;color:var(--sub);margin-top:5px}
+.kpi .s{font-size:11px;color:var(--muted);margin-top:6px}
+.kpi.ev .v{color:var(--ev)} .kpi.fuel .v{color:var(--fuel)}
+section{margin-top:28px}
+h2{font-size:15.5px;margin:0 0 14px;padding-left:11px;border-left:4px solid var(--blue);
+  display:flex;align-items:baseline;gap:10px;font-weight:700}
+h2 .hint{font-size:11.5px;color:var(--muted);font-weight:400;border:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px 12px;
+  box-shadow:0 1px 2px rgba(16,32,64,.05)}
+.panel h3{font-size:13.5px;margin:0 0 4px;color:#2c3a4f;font-weight:600}
+.panel .cap{font-size:11.5px;color:var(--muted);margin:0 0 8px;line-height:1.6}
+.chart{width:100%;height:290px}
+.chart.tall{height:330px}
+.chart.short{height:240px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:#f2f5fa;color:#41506a;font-weight:600;text-align:left;padding:9px 10px;
+  border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;z-index:2}
+td{padding:8px 10px;border-bottom:1px solid var(--line2);white-space:nowrap}
+tbody tr:hover{background:#f7fbff}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.tab{padding:7px 20px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;
+  font-size:13px;color:#3c4a5e;font-weight:600}
+.tab.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.tab.on.ev{background:var(--ev);border-color:var(--ev)}
+.tab.on.fuel{background:var(--fuel);border-color:var(--fuel)}
+.filters{display:flex;gap:9px;margin-bottom:11px;align-items:center;flex-wrap:wrap}
+.filters input,.filters select{padding:6px 11px;border:1px solid var(--line);border-radius:8px;
+  font-size:12.5px;background:#fff;color:var(--ink);outline:none}
+.filters input:focus,.filters select:focus{border-color:var(--blue)}
+.count{font-size:12px;color:var(--muted)}
+.scroll{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+.quality{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;font-size:12px}
+.qi{display:flex;align-items:center;gap:9px}
+.qi .qn{width:84px;color:#41506a;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qi .qt{flex:1;height:13px;background:#eef2f7;border-radius:7px;overflow:hidden}
+.qi .qf{height:100%;border-radius:7px;background:var(--ev)}
+.qi .qf.mid{background:#e8a33d} .qi .qf.low{background:var(--red)}
+.qi .qv{width:46px;text-align:right;color:var(--sub);flex:none;font-variant-numeric:tabular-nums}
+.cmp{display:flex;flex-direction:column;gap:11px}
+.cmprow{display:grid;grid-template-columns:130px 1fr 1fr;gap:12px;align-items:center;font-size:12.5px}
+.cmprow .cl{color:#41506a}
+.cmprow .cv{background:#f4f7fc;border-radius:8px;padding:7px 11px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+.cmprow .cv.ev{color:var(--ev);background:var(--ev-soft)}
+.cmprow .cv.fuel{color:var(--fuel);background:var(--fuel-soft)}
+.ok{color:var(--ev);font-weight:600}.bad{color:var(--red);font-weight:600}
+.warn{color:#e8a33d;font-weight:600}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--sub);margin-top:9px;flex-wrap:wrap}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:11px}
+.step{background:#fff;border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+.step .no{font-size:10.5px;color:var(--blue);font-weight:700;letter-spacing:.6px}
+.step .t{font-size:13px;font-weight:600;margin:5px 0 7px;color:#2c3a4f}
+.step .d{font-size:11.5px;color:var(--sub);line-height:1.65}
+footer{margin-top:32px;font-size:12px;color:var(--sub);line-height:1.9;
+  border-top:1px solid var(--line);padding-top:16px}
+footer b{color:#2c3a4f}
+.empty{padding:38px;text-align:center;color:var(--muted);font-size:13px}
+@media (max-width:1180px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr}
+  .quality{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>二手车行情数据看板 · 新能源 / 燃油 双业务线</h1>
+  <div class="sub">
+    数据来源：<b id="srcNote"></b>　·　采集引擎：<b>Scrapling</b>（Fetcher + 站点地图通道）　·　
+    生成时间：<b id="genAt"></b>　·　数据均为<b>真实抓取</b>，非模拟数据
+  </div>
+  <div class="badges">
+    <span class="badge">采集 → 解析 → 清洗 → 去重 → 入库 → 导出 全链路闭环</span>
+    <span class="badge">robots.txt 一票否决：仅采集显式放行通道</span>
+    <span class="badge">风控识别 · 冷却重试 · 熔断中止</span>
+    <span class="badge">指纹去重：重复采集幂等不产脏数据</span>
+    <span class="badge">三层数据可溯源：raw / ods / dwd</span>
+  </div>
+</header>
+
+<main>
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <h2>油电大盘对比 <span class="hint">两条业务线在同一口径下的并排指标</span></h2>
+    <div class="grid2">
+      <div class="panel">
+        <h3>核心指标对比</h3>
+        <p class="cap">新能源与燃油的估值主线不同：电车看电池与续航，油车看车龄与里程。同口径对比才能看出差异。</p>
+        <div class="cmp" id="cmp"></div>
+      </div>
+      <div class="panel">
+        <h3>平均保值率 / 平均售价对比</h3>
+        <p class="cap">保值率 = 二手售价 ÷ 新车指导价，反映两条线各自的贬值速度差异。</p>
+        <div class="chart" id="c_cmp"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>新能源看板 <span class="hint">电池类型 · 续航 · 健康度</span></h2>
+    <div class="grid4">
+      <div class="panel">
+        <h3>保值率 TOP 车型</h3>
+        <p class="cap">按品牌聚合的平均保值率（样本 ≥ 2 条），越高说明该品牌在二手市场越抗跌。</p>
+        <div class="chart" id="c_ev_ret"></div>
+      </div>
+      <div class="panel">
+        <h3>品牌均价排行</h3>
+        <p class="cap">各品牌平均售价（万元，样本 ≥ 3 条），反映二手市场的价格带分布。</p>
+        <div class="chart" id="c_ev_bp"></div>
+      </div>
+      <div class="panel">
+        <h3>续航 × 售价 散点</h3>
+        <p class="cap">仅统计<b>纯电续航</b>（增程/插混车的"综合续航"已剔除，避免口径混用）。</p>
+        <div class="chart" id="c_ev_scatter"></div>
+      </div>
+      <div class="panel">
+        <h3>电池类型与价格 / SOH 分布</h3>
+        <p class="cap">左轴为各电池类型均价，右轴为电池健康度（SOH）样本分布。</p>
+        <div class="chart" id="c_ev_bat"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>燃油看板 <span class="hint">价格 · 车龄 · 里程 · 排放</span></h2>
+    <div class="grid4">
+      <div class="panel">
+        <h3>售价区间分布</h3>
+        <p class="cap">燃油车按售价分箱统计，是判断主力成交价格带最直观的视图。</p>
+        <div class="chart" id="c_fu_price"></div>
+      </div>
+      <div class="panel">
+        <h3>车龄 × 里程 热力图</h3>
+        <p class="cap">颜色越深表示该「车龄段 × 里程段」的车源越集中，可识别主流车况组合。</p>
+        <div class="chart" id="c_fu_heat"></div>
+      </div>
+      <div class="panel">
+        <h3>品牌均价排行</h3>
+        <p class="cap">各品牌平均售价（万元，样本 ≥ 3 条）。</p>
+        <div class="chart" id="c_fu_bp"></div>
+      </div>
+      <div class="panel">
+        <h3>排放标准 / 变速箱分布</h3>
+        <p class="cap">排放标准直接影响限行城市的过户可行性，是燃油车独有的关键维度。</p>
+        <div class="chart" id="c_fu_emis"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>保值率与车龄 <span class="hint">贬值曲线</span></h2>
+    <div class="grid2">
+      <div class="panel">
+        <h3>车龄 → 平均保值率曲线</h3>
+        <p class="cap">横轴为车龄（年），纵轴为该车龄段的平均保值率。行业共识是车龄越长保值率越低，曲线若不符合这一常识，说明数据口径有问题。</p>
+        <div class="chart" id="c_curve"></div>
+      </div>
+      <div class="panel">
+        <h3>车龄分布</h3>
+        <p class="cap">车源在各车龄段的分布，反映市场的车源结构（准新车多还是老车多）。</p>
+        <div class="chart" id="c_age"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>车源明细 <span class="hint">可按品牌 / 城市 / 关键词筛选，点击「详情」跳转原始车源页</span></h2>
+    <div class="panel">
+      <div class="tabs">
+        <div class="tab on ev" data-line="ev">新能源 <span id="n_ev"></span></div>
+        <div class="tab fuel" data-line="fuel">燃油 <span id="n_fuel"></span></div>
+        <div class="count" id="shown" style="margin-left:auto"></div>
+      </div>
+      <div class="filters">
+        <input id="kw" placeholder="搜索品牌 / 车型 / 城市" style="width:230px">
+        <select id="brandSel"><option value="">全部品牌</option></select>
+        <select id="citySel"><option value="">全部城市</option></select>
+        <select id="sortSel">
+          <option value="price">按售价</option>
+          <option value="retention">按保值率</option>
+          <option value="mileage">按里程</option>
+        </select>
+      </div>
+      <div class="scroll"><table id="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>数据质量与采集日志 <span class="hint">字段完整率 · 运行记录 · 异常明细</span></h2>
+    <div class="grid2">
+      <div class="panel"><h3>新能源线字段完整率</h3><div class="quality" id="q_ev"></div></div>
+      <div class="panel"><h3>燃油线字段完整率</h3><div class="quality" id="q_fuel"></div></div>
+    </div>
+    <div class="panel" style="margin-top:15px">
+      <h3>采集任务运行记录</h3>
+      <p class="cap">每一次采集都留痕：抓到多少、入库多少、去重多少、被风控拦了多少、下架多少。
+        <b>「更新 + 去重」列就是幂等性的证据</b>——同一批车源重复采集只更新不新增。</p>
+      <div class="scroll" style="max-height:340px"><table>
+        <thead><tr><th>开始时间</th><th>业务线</th><th>数据源</th><th>状态</th><th>取页</th>
+        <th>抓到</th><th>解析</th><th>新增</th><th>更新</th><th>去重</th><th>异常</th><th>缺失率</th><th>耗时(s)</th><th>明细</th></tr></thead>
+        <tbody id="logs"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>这套系统是怎么跑的 <span class="hint">五步链路</span></h2>
+    <div class="steps">
+      <div class="step"><div class="no">STEP 1</div><div class="t">合规闸门</div>
+        <div class="d">先读目标站 robots.txt，逐一比对每一条待抓 URL；明确禁止的源直接拒绝执行并告警，不发一个请求。</div></div>
+      <div class="step"><div class="no">STEP 2</div><div class="t">发现详情页</div>
+        <div class="d">读站点地图与子地图，拿到车源详情页清单，等距抽样——全量约 14 万条，抽样既礼貌也让样本在城市/品牌上均匀铺开。</div></div>
+      <div class="step"><div class="no">STEP 3</div><div class="t">限速抓取</div>
+        <div class="d">令牌桶限速（单站 QPS ≤ 0.5）、指数退避重试、响应落盘留档；HTTP 200 也要校验内容结构，识别风控页。</div></div>
+      <div class="step"><div class="no">STEP 4</div><div class="t">解析与清洗</div>
+        <div class="d">解析结构化字段，把「28.47万元」「1.53万公里」「2025-09」统一成数字与年月，按能源类型分流到两条业务线。</div></div>
+      <div class="step"><div class="no">STEP 5</div><div class="t">校验入库导出</div>
+        <div class="d">模型逐条校验，价格缺失或非正数直接拒收；合法数据指纹去重后入库，并导出 Excel / CSV 供业务直接使用。</div></div>
+    </div>
+  </section>
+
+  <footer>
+    <b>数据合规声明：</b>本看板全部数据来自目标平台 robots.txt <b>显式放行</b>的车源详情通道
+    （<code>Allow: /car-detail/*.md</code>，并由其站点地图 <code>pc_cardetail_md_index.xml</code> 主动公开），
+    仅采集公开可访问信息，不解析受保护页面、不绕过登录与验证码、URL 不含查询参数；请求已限速并控制抓取频率，
+    仅用于个人学习与求职作品展示。<br>
+    <b>技术栈：</b>Scrapling（抓取 / 站点地图 / 解析）· Pydantic（数据契约与校验）· SQLAlchemy（存储，SQLite / MySQL 双兼容）·
+    APScheduler（定时调度）· pandas + openpyxl（导出）· ECharts（可视化）· pytest（单元测试）。
+  </footer>
+</main>
+
+<script src="echarts.min.js"></script>
+<script>
+if (typeof echarts === 'undefined') {
+  document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"><\/script>');
+}
+</script>
+<script>
+const D = {"generated_at": "2026-09-19 12:04", "source_note": "瓜子二手车 · 车源详情 Markdown 通道（robots.txt 显式放行）", "kpi": {"total": 103, "ev": 30, "fuel": 73, "brands": 45, "cities": 39, "avg_price": 9.3014, "avg_retention": 0.3859}, "compare": [{"label": "车源样本量", "ev": "30 条", "fuel": "73 条"}, {"label": "平均售价", "ev": "12.356 万", "fuel": "8.046 万"}, {"label": "平均保值率", "ev": "55.5%", "fuel": "31.6%"}, {"label": "平均车龄", "ev": "3.04 年", "fuel": "7.0233 年"}, {"label": "平均里程", "ev": "47,980 km", "fuel": "84,185 km"}, {"label": "覆盖品牌", "ev": "17 个", "fuel": "33 个"}], "ev": {"line": "ev", "count": 30, "brands": 17, "cities": 14, "avg_price": 12.356, "median_price": 11.47, "min_price": 1.62, "max_price": 53.81, "avg_retention": 0.555, "avg_mileage": 47980, "avg_age": 3.04, "top_brands": [{"name": "比亚迪", "n": 5}, {"name": "特斯拉", "n": 4}, {"name": "五菱", "n": 3}, {"name": "小鹏", "n": 2}, {"name": "零跑", "n": 2}, {"name": "别克", "n": 2}, {"name": "吉利银河", "n": 2}, {"name": "欧拉", "n": 1}, {"name": "哪吒", "n": 1}, {"name": "极狐", "n": 1}], "top_cities": [{"name": "苏州", "n": 15}, {"name": "南京", "n": 2}, {"name": "北京", "n": 2}, {"name": "石家庄", "n": 1}, {"name": "天津", "n": 1}, {"name": "重庆", "n": 1}, {"name": "成都", "n": 1}, {"name": "哈尔滨", "n": 1}, {"name": "开封", "n": 1}, {"name": "沈阳", "n": 1}], "price_dist": [{"name": "3万以下", "n": 2}, {"name": "3-5万", "n": 4}, {"name": "5-8万", "n": 4}, {"name": "8-12万", "n": 10}, {"name": "12-18万", "n": 6}, {"name": "18-25万", "n": 1}, {"name": "25-40万", "n": 2}, {"name": "40万以上", "n": 1}], "age_dist": [{"name": "1年内", "n": 2}, {"name": "1-2年", "n": 10}, {"name": "2-3年", "n": 4}, {"name": "3-5年", "n": 8}, {"name": "5-8年", "n": 6}, {"name": "8-11年", "n": 0}, {"name": "11年以上", "n": 0}], "brand_price_rank": [{"name": "特斯拉", "avg": 18.35, "n": 4}, {"name": "比亚迪", "avg": 11.98, "n": 5}, {"name": "五菱", "avg": 4.42, "n": 3}], "brand_retention_rank": [{"name": "比亚迪", "avg": 72.9, "n": 5}, {"name": "五菱", "avg": 63.8, "n": 3}, {"name": "别克", "avg": 61.2, "n": 2}, {"name": "特斯拉", "avg": 59.1, "n": 4}, {"name": "小鹏", "avg": 57.7, "n": 2}, {"name": "吉利银河", "avg": 57.6, "n": 2}, {"name": "零跑", "avg": 56.5, "n": 2}], "age_retention": [{"age": 0, "rate": 94.1, "n": 2}, {"age": 1, "rate": 69.2, "n": 10}, {"age": 2, "rate": 58.6, "n": 4}, {"age": 3, "rate": 50.2, "n": 4}, {"age": 4, "rate": 38.0, "n": 4}, {"age": 5, "rate": 37.5, "n": 4}, {"age": 6, "rate": 19.2, "n": 1}, {"age": 7, "rate": 28.0, "n": 1}], "heatmap": {"x": ["1万内", "1-3万", "3-6万", "6-10万", "10-15万", "15万以上"], "y": ["1年内", "1-2年", "2-3年", "3-5年", "5-8年", "8-11年", "11年以上"], "data": [["3-6万", "3-5年", 5], ["3-6万", "1-2年", 4], ["6-10万", "5-8年", 3], ["10-15万", "3-5年", 1], ["1-3万", "2-3年", 2], ["1万内", "1-2年", 4], ["10-15万", "5-8年", 2], ["3-6万", "2-3年", 1], ["10-15万", "2-3年", 1], ["1万内", "1年内", 2], ["1-3万", "3-5年", 1], ["1-3万", "1-2年", 2], ["1-3万", "5-8年", 1], ["6-10万", "3-5年", 1]]}, "field_completeness": [{"field": "brand", "label": "品牌", "rate": 100.0}, {"field": "model", "label": "车型", "rate": 100.0}, {"field": "price_wan", "label": "售价", "rate": 100.0}, {"field": "new_car_price_wan", "label": "新车指导价", "rate": 100.0}, {"field": "retention_rate", "label": "保值率", "rate": 100.0}, {"field": "mileage_km", "label": "里程", "rate": 100.0}, {"field": "reg_year", "label": "上牌年份", "rate": 100.0}, {"field": "transfer_count", "label": "过户次数", "rate": 100.0}, {"field": "location_city", "label": "城市", "rate": 100.0}, {"field": "battery_type", "label": "电池类型", "rate": 10.0}, {"field": "range_km", "label": "标称续航", "rate": 60.0}, {"field": "battery_health", "label": "电池健康度", "rate": 66.7}], "battery_price": [{"name": "未知", "avg": 13.17, "n": 27}, {"name": "磷酸铁锂", "avg": 5.0, "n": 3}], "range_price_scatter": [[400.0, 5.73, "欧拉", "欧拉好猫"], [620.0, 8.78, "小鹏", "小鹏MONA M03"], [301.0, 3.08, "哪吒", "哪吒V"], [708.0, 8.8, "极狐", "极狐 阿尔法S"], [625.0, 11.92, "小鹏", "小鹏P7"], [545.0, 11.06, "比亚迪", "秦L"], [520.0, 11.84, "零跑", "零跑C16"], [620.0, 12.23, "别克", "别克E5"], [305.0, 4.8, "比亚迪", "海鸥"], [401.0, 7.65, "比亚迪", "元UP"], [545.0, 15.47, "特斯拉", "Model Y"], [403.0, 3.84, "零跑", "零跑T03"], [215.0, 2.99, "五菱", "宏光MINIEV"], [660.0, 17.28, "特斯拉", "Model Y"], [610.0, 8.65, "五菱", "五菱星光"], [120.0, 1.62, "五菱", "宏光MINIEV"], [664.0, 11.8, "特斯拉", "Model 3(进口)"], [210.0, 11.47, "东风奕派", "eπ008"]], "range_standard_dist": [{"name": "未标注", "n": 16}, {"name": "CLTC", "n": 2}], "health_dist": [{"name": "<80%", "n": 0}, {"name": "80-85%", "n": 0}, {"name": "85-90%", "n": 9}, {"name": "90-95%", "n": 4}, {"name": "95%+", "n": 7}], "health_avg": 91.65, "health_n": 20}, "fuel": {"line": "fuel", "count": 73, "brands": 33, "cities": 30, "avg_price": 8.046, "median_price": 5.5, "min_price": 1.07, "max_price": 32.58, "avg_retention": 0.3165, "avg_mileage": 84185, "avg_age": 7.0233, "top_brands": [{"name": "宝马", "n": 7}, {"name": "奔驰", "n": 7}, {"name": "大众", "n": 6}, {"name": "本田", "n": 5}, {"name": "马自达", "n": 5}, {"name": "哈弗", "n": 5}, {"name": "丰田", "n": 3}, {"name": "别克", "n": 3}, {"name": "吉利", "n": 3}, {"name": "奥迪", "n": 3}], "top_cities": [{"name": "苏州", "n": 38}, {"name": "青岛", "n": 3}, {"name": "上海", "n": 2}, {"name": "衢州", "n": 2}, {"name": "深圳", "n": 2}, {"name": "重庆", "n": 2}, {"name": "海口", "n": 1}, {"name": "广州", "n": 1}, {"name": "南宁", "n": 1}, {"name": "郑州", "n": 1}], "price_dist": [{"name": "3万以下", "n": 15}, {"name": "3-5万", "n": 18}, {"name": "5-8万", "n": 17}, {"name": "8-12万", "n": 9}, {"name": "12-18万", "n": 6}, {"name": "18-25万", "n": 5}, {"name": "25-40万", "n": 3}, {"name": "40万以上", "n": 0}], "age_dist": [{"name": "1年内", "n": 1}, {"name": "1-2年", "n": 3}, {"name": "2-3年", "n": 5}, {"name": "3-5年", "n": 9}, {"name": "5-8年", "n": 22}, {"name": "8-11年", "n": 28}, {"name": "11年以上", "n": 5}], "brand_price_rank": [{"name": "丰田", "avg": 17.47, "n": 3}, {"name": "宝马", "avg": 15.19, "n": 7}, {"name": "奔驰", "avg": 13.04, "n": 7}, {"name": "大众", "avg": 9.62, "n": 6}, {"name": "别克", "avg": 6.84, "n": 3}, {"name": "奥迪", "avg": 6.1, "n": 3}, {"name": "吉利", "avg": 5.14, "n": 3}, {"name": "本田", "avg": 4.5, "n": 5}, {"name": "马自达", "avg": 4.07, "n": 5}, {"name": "哈弗", "avg": 2.79, "n": 5}], "brand_retention_rank": [{"name": "丰田", "avg": 52.7, "n": 3}, {"name": "吉利", "avg": 45.4, "n": 3}, {"name": "大众", "avg": 38.8, "n": 6}, {"name": "日产", "avg": 37.8, "n": 2}, {"name": "宝马", "avg": 34.4, "n": 7}, {"name": "本田", "avg": 31.7, "n": 5}, {"name": "名爵", "avg": 29.9, "n": 2}, {"name": "奔驰", "avg": 29.0, "n": 7}, {"name": "马自达", "avg": 27.1, "n": 5}, {"name": "奥迪", "avg": 24.6, "n": 3}], "age_retention": [{"age": 0, "rate": 80.2, "n": 1}, {"age": 1, "rate": 52.7, "n": 3}, {"age": 2, "rate": 54.2, "n": 5}, {"age": 3, "rate": 45.9, "n": 4}, {"age": 4, "rate": 41.6, "n": 5}, {"age": 5, "rate": 38.8, "n": 6}, {"age": 6, "rate": 30.0, "n": 7}, {"age": 7, "rate": 32.8, "n": 9}, {"age": 8, "rate": 23.6, "n": 14}, {"age": 9, "rate": 20.3, "n": 8}, {"age": 10, "rate": 17.7, "n": 6}, {"age": 11, "rate": 16.8, "n": 3}, {"age": 12, "rate": 11.3, "n": 2}], "heatmap": {"x": ["1万内", "1-3万", "3-6万", "6-10万", "10-15万", "15万以上"], "y": ["1年内", "1-2年", "2-3年", "3-5年", "5-8年", "8-11年", "11年以上"], "data": [["6-10万", "5-8年", 14], ["3-6万", "8-11年", 3], ["10-15万", "8-11年", 12], ["1-3万", "1-2年", 3], ["6-10万", "11年以上", 2], ["6-10万", "8-11年", 8], ["3-6万", "2-3年", 2], ["10-15万", "5-8年", 2], ["10-15万", "11年以上", 3], ["1-3万", "5-8年", 1], ["3-6万", "3-5年", 5], ["6-10万", "3-5年", 4], ["15万以上", "8-11年", 5], ["3-6万", "5-8年", 4], ["1-3万", "2-3年", 2], ["1万内", "1年内", 1], ["15万以上", "5-8年", 1], ["1万内", "2-3年", 1]]}, "field_completeness": [{"field": "brand", "label": "品牌", "rate": 100.0}, {"field": "model", "label": "车型", "rate": 100.0}, {"field": "price_wan", "label": "售价", "rate": 100.0}, {"field": "new_car_price_wan", "label": "新车指导价", "rate": 100.0}, {"field": "retention_rate", "label": "保值率", "rate": 100.0}, {"field": "mileage_km", "label": "里程", "rate": 100.0}, {"field": "reg_year", "label": "上牌年份", "rate": 100.0}, {"field": "transfer_count", "label": "过户次数", "rate": 100.0}, {"field": "location_city", "label": "城市", "rate": 100.0}, {"field": "displacement_l", "label": "排量", "rate": 100.0}, {"field": "gearbox", "label": "变速箱", "rate": 100.0}, {"field": "emission_standard", "label": "排放标准", "rate": 100.0}], "emission_dist": [{"name": "国五", "n": 34}, {"name": "国六B", "n": 23}, {"name": "国六", "n": 9}, {"name": "国四", "n": 7}], "gearbox_dist": [{"name": "AT", "n": 65}, {"name": "MT", "n": 8}], "displacement_dist": [{"name": "1.0L以下", "n": 0}, {"name": "1.0-1.6L", "n": 30}, {"name": "1.6-2.0L", "n": 10}, {"name": "2.0-3.0L", "n": 30}, {"name": "3.0L以上", "n": 3}], "displacement_avg": 1.8082}, "ev_rows": [{"brand": "欧拉", "model": "欧拉好猫", "title": "二手欧拉好猫 2021款 400km标准续航 雅典娜版 磷酸铁锂报价，真实车源图片/视频 - 瓜子二手车", "price": 5.73, "new_price": 12.39, "retention": 46.2, "mileage": 53900, "reg": "2021-11", "city": "石家庄", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172669242320896.html", "battery": "磷酸铁锂", "range": 400, "range_std": "—", "soh": 87.0}, {"brand": "小鹏", "model": "小鹏MONA M03", "title": "二手小鹏MONA M03 2024款 620 超长续航报价，真实车源图片/视频 - 瓜子二手车", "price": 8.78, "new_price": 12.98, "retention": 67.6, "mileage": 56300, "reg": "2025-02", "city": "天津", "transfer": 1, "url": "https://www.guazi.com/car-detail/c172594833621829.html", "battery": "—", "range": 620, "range_std": "—", "soh": null}, {"brand": "哪吒", "model": "哪吒V", "title": "二手哪吒汽车 哪吒V 2021款 标准续航娱乐版升级型报价，真实车源图片/视频 - 瓜子二手车", "price": 3.08, "new_price": 6.89, "retention": 44.7, "mileage": 84500, "reg": "2021-05", "city": "苏州", "transfer": 2, "url": "https://www.guazi.com/car-detail/c172581705424680.html", "battery": "—", "range": 301, "range_std": "—", "soh": 87.0}, {"brand": "极狐", "model": "极狐 阿尔法S", "title": "二手ARCFOX极狐 极狐 阿尔法S 2022款 708S+ 160kW报价，真实车源图片/视频 - 瓜子二手车", "price": 8.8, "new_price": 28.73, "retention": 30.6, "mileage": 103800, "reg": "2022-04", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c172563205193395.html", "battery": "—", "range": 708, "range_std": "—", "soh": null}, {"brand": "小鹏", "model": "小鹏P7", "title": "二手小鹏P7 2022款 625E报价，真实车源图片/视频 - 瓜子二手车", "price": 11.92, "new_price": 24.99, "retention": 47.7, "mileage": 18000, "reg": "2024-03", "city": "南京", "transfer": 1, "url": "https://www.guazi.com/car-detail/c172477537567726.html", "battery": "—", "range": 625, "range_std": "—", "soh": 92.0}, {"brand": "比亚迪", "model": "秦L", "title": "二手比亚迪 秦L 2025款 EV 545KM超越型报价，真实车源图片/视频 - 瓜子二手车", "price": 11.06, "new_price": 12.98, "retention": 85.2, "mileage": 5700, "reg": "2025-04", "city": "重庆", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172463988266291.html", "battery": "—", "range": 545, "range_std": "—", "soh": 96.0}, {"brand": "比亚迪", "model": "唐L", "title": "二手比亚迪 唐L 2025款 DM 175KM无人机玩家版报价，真实车源图片/视频 - 瓜子二手车", "price": 17.71, "new_price": 28.58, "retention": 62.0, "mileage": 7700, "reg": "2025-04", "city": "北京", "transfer": 1, "url": "https://www.guazi.com/car-detail/c172445530941807.html", "battery": "—", "range": null, "range_std": "—", "soh": null}, {"brand": "荣威", "model": "荣威RX5 eMAX", "title": "二手荣威RX5 eMAX 2020款 500PHEV 4G互联豪华版报价，真实车源图片/视频 - 瓜子二手车", "price": 3.77, "new_price": 19.58, "retention": 19.2, "mileage": 107700, "reg": "2020-08", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172431206181512.html", "battery": "—", "range": null, "range_std": "—", "soh": null}, {"brand": "零跑", "model": "零跑C16", "title": "二手零跑汽车 零跑C16 2024款 纯电 520尊享版报价，真实车源图片/视频 - 瓜子二手车", "price": 11.84, "new_price": 16.88, "retention": 70.1, "mileage": 47000, "reg": "2024-11", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172361487256103.html", "battery": "—", "range": 520, "range_std": "—", "soh": 89.0}, {"brand": "别克", "model": "别克GL8新能源", "title": "二手别克GL8新能源 2024款 陆尊 尊享版 7座报价，真实车源图片/视频 - 瓜子二手车", "price": 25.42, "new_price": 38.99, "retention": 65.2, "mileage": 34700, "reg": "2025-02", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172314371130840.html", "battery": "—", "range": null, "range_std": "—", "soh": null}, {"brand": "别克", "model": "别克E5", "title": "二手别克E5 2023款 臻享长续航版报价，真实车源图片/视频 - 瓜子二手车", "price": 12.23, "new_price": 21.39, "retention": 57.2, "mileage": 52600, "reg": "2023-07", "city": "成都", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172259690127063.html", "battery": "—", "range": 620, "range_std": "CLTC", "soh": 88.0}, {"brand": "比亚迪", "model": "海鸥", "title": "二手比亚迪 海鸥 2024款 荣耀版 305km 活力版报价，真实车源图片/视频 - 瓜子二手车", "price": 4.8, "new_price": 6.98, "retention": 68.8, "mileage": 32000, "reg": "2024-05", "city": "南京", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171914440273949.html", "battery": "—", "range": 305, "range_std": "—", "soh": 89.0}, {"brand": "吉利银河", "model": "银河L6", "title": "二手吉利银河 银河L6 2023款 125km PLUS报价，真实车源图片/视频 - 瓜子二手车", "price": 5.92, "new_price": 13.28, "retention": 44.6, "mileage": 141600, "reg": "2024-06", "city": "哈尔滨", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171806401317389.html", "battery": "—", "range": null, "range_std": "—", "soh": 87.0}, {"brand": "比亚迪", "model": "元UP", "title": "二手比亚迪 元UP 2025款 智驾版 401KM 活力版报价，真实车源图片/视频 - 瓜子二手车", "price": 7.65, "new_price": 9.98, "retention": 76.6, "mileage": 33800, "reg": "2025-08", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171769040143194.html", "battery": "磷酸铁锂", "range": 401, "range_std": "—", "soh": 96.0}, {"brand": "特斯拉", "model": "Model Y", "title": "二手特斯拉 Model Y 2022款 改款 后轮驱动版报价，真实车源图片/视频 - 瓜子二手车", "price": 15.47, "new_price": 26.39, "retention": 58.6, "mileage": 52000, "reg": "2022-12", "city": "开封", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171566071249573.html", "battery": "—", "range": 545, "range_std": "—", "soh": 91.0}, {"brand": "零跑", "model": "零跑T03", "title": "二手零跑汽车 零跑T03 2022款 皓玉版报价，真实车源图片/视频 - 瓜子二手车", "price": 3.84, "new_price": 8.95, "retention": 42.9, "mileage": 38800, "reg": "2022-08", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c171230373281973.html", "battery": "—", "range": 403, "range_std": "—", "soh": 85.0}, {"brand": "五菱", "model": "宏光MINIEV", "title": "二手五菱汽车 宏光MINIEV 2024款 第三代 215km 青春版报价，真实车源图片/视频 - 瓜子二手车", "price": 2.99, "new_price": 4.08, "retention": 73.3, "mileage": 17400, "reg": "2024-08", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c171226379478977.html", "battery": "—", "range": 215, "range_std": "—", "soh": 93.0}, {"brand": "特斯拉", "model": "Model Y", "title": "二手特斯拉 Model Y 2022款 改款 长续航全轮驱动版报价，真实车源图片/视频 - 瓜子二手车", "price": 17.28, "new_price": 29.99, "retention": 57.6, "mileage": 59700, "reg": "2023-09", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c171209513272882.html", "battery": "—", "range": 660, "range_std": "CLTC", "soh": 92.0}, {"brand": "特斯拉", "model": "Model Y", "title": "二手特斯拉 Model Y 2026款 长续航全轮驱动版报价，真实车源图片/视频 - 瓜子二手车", "price": 28.86, "new_price": 31.35, "retention": 92.1, "mileage": 400, "reg": "2026-08", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c171104416876943.html", "battery": "—", "range": null, "range_std": "—", "soh": 96.0}, {"brand": "蔚来", "model": "蔚来ES8", "title": "二手蔚来ES8 2020款 415KM 六座版报价，真实车源图片/视频 - 瓜子二手车", "price": 12.15, "new_price": 47.6, "retention": 25.5, "mileage": 67900, "reg": "2021-06", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171013596154913.html", "battery": "—", "range": null, "range_std": "—", "soh": null}, {"brand": "极氪", "model": "极氪9X", "title": "二手极氪9X 2025款 Hyper版 70kWh报价，真实车源图片/视频 - 瓜子二手车", "price": 53.81, "new_price": 55.99, "retention": 96.1, "mileage": 4300, "reg": "2026-01", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c170932725174570.html", "battery": "—", "range": null, "range_std": "—", "soh": null}, {"brand": "红旗", "model": "红旗E-HS9", "title": "二手红旗E-HS9 2021款 460km 旗享版 六座报价，真实车源图片/视频 - 瓜子二手车", "price": 14.82, "new_price": 53.98, "retention": 27.5, "mileage": 16300, "reg": "2023-04", "city": "沈阳", "transfer": 0, "url": "https://www.guazi.com/car-detail/c170459063869268.html", "battery": "—", "range": null, "range_std": "—", "soh": 89.0}, {"brand": "比亚迪", "model": "汉L", "title": "二手比亚迪 汉L 2025款 DM-p 四驱激光雷达旗舰型报价，真实车源图片/视频 - 瓜子二手车", "price": 18.66, "new_price": 25.98, "retention": 71.8, "mileage": 12100, "reg": "2025-05", "city": "北京", "transfer": 0, "url": "https://www.guazi.com/car-detail/c169629738373808.html", "battery": "—", "range": null, "range_std": "—", "soh": 95.0}, {"brand": "五菱", "model": "五菱星光", "title": "二手五菱汽车 五菱星光 2025款 610km 智能旗舰型报价，真实车源图片/视频 - 瓜子二手车", "price": 8.65, "new_price": 12.58, "retention": 68.8, "mileage": 8800, "reg": "2025-04", "city": "昆明", "transfer": 1, "url": "https://www.guazi.com/car-detail/c168977307243069.html", "battery": "—", "range": 610, "range_std": "—", "soh": 97.0}, {"brand": "大众", "model": "探岳GTE插电混动", "title": "二手大众 探岳GTE插电混动 2020款 1.4T 豪华型报价，真实车源图片/视频 - 瓜子二手车", "price": 7.62, "new_price": 24.98, "retention": 30.5, "mileage": 94000, "reg": "2021-02", "city": "大连", "transfer": 0, "url": "https://www.guazi.com/car-detail/c168593127258842.html", "battery": "—", "range": null, "range_std": "—", "soh": null}, {"brand": "五菱", "model": "宏光MINIEV", "title": "二手五菱汽车 宏光MINIEV 2020款 自在款 磷酸铁锂报价，真实车源图片/视频 - 瓜子二手车", "price": 1.62, "new_price": 3.28, "retention": 49.4, "mileage": 28300, "reg": "2020-12", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c167927417211569.html", "battery": "磷酸铁锂", "range": 120, "range_std": "—", "soh": null}, {"brand": "吉利银河", "model": "银河星耀8", "title": "二手吉利银河 银河星耀8 2025款 130km EM-P 星舰版报价，真实车源图片/视频 - 瓜子二手车", "price": 11.71, "new_price": 16.58, "retention": 70.6, "mileage": 7000, "reg": "2025-08", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c166510475292494.html", "battery": "—", "range": null, "range_std": "—", "soh": 98.0}, {"brand": "特斯拉", "model": "Model 3(进口)", "title": "二手特斯拉 Model 3(进口) 2019款 长续航后驱版报价，真实车源图片/视频 - 瓜子二手车", "price": 11.8, "new_price": 42.1, "retention": 28.0, "mileage": 138100, "reg": "2019-05", "city": "广州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c165714019276642.html", "battery": "—", "range": 664, "range_std": "—", "soh": null}, {"brand": "理想", "model": "理想ONE", "title": "二手理想汽车 理想ONE 2021款 增程6座版报价，真实车源图片/视频 - 瓜子二手车", "price": 11.22, "new_price": 34.98, "retention": 32.1, "mileage": 86600, "reg": "2021-11", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c164785609304908.html", "battery": "—", "range": null, "range_std": "—", "soh": 89.0}, {"brand": "东风奕派", "model": "eπ008", "title": "二手东风奕派 eπ008 2025款 210Ultra增程版 5座报价，真实车源图片/视频 - 瓜子二手车", "price": 11.47, "new_price": 21.16, "retention": 54.2, "mileage": 28400, "reg": "2024-12", "city": "贵阳", "transfer": 0, "url": "https://www.guazi.com/car-detail/c163187512324288.html", "battery": "—", "range": 210, "range_std": "—", "soh": 97.0}], "fuel_rows": [{"brand": "宝马", "model": "宝马X1", "title": "二手宝马X1 2020款 sDrive25Li 领先型报价，真实车源图片/视频 - 瓜子二手车", "price": 6.8, "new_price": 33.72, "retention": 20.2, "mileage": 95100, "reg": "2019-11", "city": "海口", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172682368100668.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "林肯", "model": "领航员", "title": "二手林肯 领航员 2017款 3.5T AWD报价，真实车源图片/视频 - 瓜子二手车", "price": 19.33, "new_price": 107.63, "retention": 18.0, "mileage": 37100, "reg": "2017-11", "city": "上海", "transfer": 1, "url": "https://www.guazi.com/car-detail/c172676455696232.html", "disp": 3.5, "gearbox": "AT", "emission": "国五"}, {"brand": "传祺", "model": "传祺GS4", "title": "二手广汽传祺 传祺GS4 2018款 235T 自动两驱豪华智联版报价，真实车源图片/视频 - 瓜子二手车", "price": 3.45, "new_price": 14.56, "retention": 23.7, "mileage": 94100, "reg": "2018-12", "city": "广州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172674614131076.html", "disp": 1.5, "gearbox": "AT", "emission": "国五"}, {"brand": "大众", "model": "途昂", "title": "【高保值】二手大众 途昂 2017款 530 V6 四驱豪华版报价，真实车源图片/视频 - 瓜子二手车", "price": 9.63, "new_price": 47.77, "retention": 20.2, "mileage": 111600, "reg": "2018-08", "city": "苏州", "transfer": 2, "url": "https://www.guazi.com/car-detail/c172629166211746.html", "disp": 2.5, "gearbox": "AT", "emission": "国五"}, {"brand": "大众", "model": "途观L", "title": "二手大众 途观L 2025款 出众款 330TSI 自动两驱R-Line龙耀版报价，真实车源图片/视频 - 瓜子二手车", "price": 14.65, "new_price": 23.62, "retention": 62.0, "mileage": 12400, "reg": "2025-06", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172612441123020.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "smart", "model": "smart fortwo", "title": "二手smart fortwo 2012款 1.0 MHD 硬顶激情版报价，真实车源图片/视频 - 瓜子二手车", "price": 2.76, "new_price": 15.02, "retention": 18.4, "mileage": 82700, "reg": "2015-01", "city": "苏州", "transfer": 5, "url": "https://www.guazi.com/car-detail/c172587418276766.html", "disp": 1.0, "gearbox": "AT", "emission": "国四"}, {"brand": "本田", "model": "雅阁", "title": "【VIP车主】二手本田 雅阁 2015款 2.0L LXS 精英版报价，真实车源图片/视频 - 瓜子二手车", "price": 4.99, "new_price": 20.66, "retention": 24.1, "mileage": 44800, "reg": "2015-12", "city": "上海", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172576032144588.html", "disp": 2.0, "gearbox": "AT", "emission": "国五"}, {"brand": "马自达", "model": "马自达3 昂克赛拉", "title": "【高保值】二手马自达3 昂克赛拉 2017款 两厢 1.5L 自动舒适型 国V报价，真实车源图片/视频 - 瓜子二手车", "price": 4.19, "new_price": 13.49, "retention": 31.1, "mileage": 52200, "reg": "2018-08", "city": "苏州", "transfer": 2, "url": "https://www.guazi.com/car-detail/c172553871507672.html", "disp": 1.5, "gearbox": "AT", "emission": "国五"}, {"brand": "马自达", "model": "马自达3 昂克赛拉", "title": "【高保值】二手马自达3 昂克赛拉 2017款 三厢 1.5L 自动舒适型 国V报价，真实车源图片/视频 - 瓜子二手车", "price": 3.17, "new_price": 13.49, "retention": 23.5, "mileage": 69500, "reg": "2017-10", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172523917946348.html", "disp": 1.5, "gearbox": "AT", "emission": "国五"}, {"brand": "宝马", "model": "宝马5系", "title": "【原厂质保】二手宝马5系 2024款 525Li 豪华套装报价，真实车源图片/视频 - 瓜子二手车", "price": 24.83, "new_price": 47.88, "retention": 51.9, "mileage": 59500, "reg": "2024-06", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172522574269712.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "宝马", "model": "宝马5系", "title": "二手宝马5系 2021款 改款 530Li 领先型 M运动套装报价，真实车源图片/视频 - 瓜子二手车", "price": 17.35, "new_price": 50.28, "retention": 34.5, "mileage": 103500, "reg": "2021-09", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172499151226752.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "福特", "model": "蒙迪欧", "title": "【VIP车主】二手福特 蒙迪欧 2013款 2.0L GTDi200时尚型报价，真实车源图片/视频 - 瓜子二手车", "price": 2.77, "new_price": 22.07, "retention": 12.6, "mileage": 143800, "reg": "2015-09", "city": "青岛", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172488837103211.html", "disp": 2.0, "gearbox": "AT", "emission": "国五"}, {"brand": "宝马", "model": "宝马3系", "title": "二手宝马3系 2021款 改款 320Li M运动套装报价，真实车源图片/视频 - 瓜子二手车", "price": 13.28, "new_price": 34.71, "retention": 38.3, "mileage": 22300, "reg": "2021-04", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172446842649909.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "大众", "model": "迈腾", "title": "二手大众 迈腾 2018款 330TSI DSG 尊贵型报价，真实车源图片/视频 - 瓜子二手车", "price": 7.74, "new_price": 28.18, "retention": 27.5, "mileage": 129400, "reg": "2018-01", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172423212844170.html", "disp": 1.8, "gearbox": "AT", "emission": "国五"}, {"brand": "奔驰", "model": "奔驰CLA", "title": "二手奔驰CLA 2020款 CLA 200 猎跑车报价，真实车源图片/视频 - 瓜子二手车", "price": 11.05, "new_price": 32.63, "retention": 33.9, "mileage": 84600, "reg": "2020-09", "city": "南宁", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172418156153060.html", "disp": 1.3, "gearbox": "AT", "emission": "国六B"}, {"brand": "荣威", "model": "荣威350", "title": "二手荣威350 2015款 1.5L 手动豪华天窗版报价，真实车源图片/视频 - 瓜子二手车", "price": 1.07, "new_price": 8.57, "retention": 12.5, "mileage": 115300, "reg": "2016-01", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172376065115913.html", "disp": 1.5, "gearbox": "MT", "emission": "国四"}, {"brand": "奔驰", "model": "奔驰E级", "title": "【VIP车主】二手奔驰E级 2022款 改款 E 300 L 运动时尚型报价，真实车源图片/视频 - 瓜子二手车", "price": 21.23, "new_price": 51.78, "retention": 41.0, "mileage": 32600, "reg": "2022-07", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172354006252906.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "东风风行", "model": "菱智", "title": "二手东风风行 菱智 2022款 M5L 1.6L 实用型 7座报价，真实车源图片/视频 - 瓜子二手车", "price": 3.31, "new_price": 7.28, "retention": 45.5, "mileage": 69800, "reg": "2022-03", "city": "郑州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172338771155903.html", "disp": 1.6, "gearbox": "MT", "emission": "国六B"}, {"brand": "丰田", "model": "威兰达", "title": "二手丰田 威兰达 2021款 2.0L CVT四驱豪华版报价，真实车源图片/视频 - 瓜子二手车", "price": 8.95, "new_price": 22.62, "retention": 39.6, "mileage": 68200, "reg": "2021-06", "city": "杭州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172338078227173.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "日产", "model": "天籁", "title": "二手日产 天籁 2016款 改款 2.0L XL舒适版报价，真实车源图片/视频 - 瓜子二手车", "price": 4.48, "new_price": 20.33, "retention": 22.0, "mileage": 80600, "reg": "2017-06", "city": "江门", "transfer": 1, "url": "https://www.guazi.com/car-detail/c172267475194613.html", "disp": 2.0, "gearbox": "AT", "emission": "国五"}, {"brand": "宝马", "model": "宝马X3", "title": "二手宝马X3 2018款 xDrive28i M运动套装 国VI报价，真实车源图片/视频 - 瓜子二手车", "price": 11.78, "new_price": 46.35, "retention": 25.4, "mileage": 60800, "reg": "2019-01", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172164548311094.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "名爵", "model": "名爵ZS", "title": "【VIP车主】二手名爵ZS 2017款 1.5L 自动精英版报价，真实车源图片/视频 - 瓜子二手车", "price": 1.98, "new_price": 10.32, "retention": 19.2, "mileage": 164800, "reg": "2017-09", "city": "烟台", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172153856176589.html", "disp": 1.5, "gearbox": "AT", "emission": "国五"}, {"brand": "五菱", "model": "五菱宏光", "title": "二手五菱汽车 五菱宏光 2016款 1.5L 改款S舒适型报价，真实车源图片/视频 - 瓜子二手车", "price": 2.17, "new_price": 6.18, "retention": 35.1, "mileage": 74200, "reg": "2018-01", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c172120783250098.html", "disp": 1.5, "gearbox": "MT", "emission": "国五"}, {"brand": "本田", "model": "凌派", "title": "【高保值】二手本田 凌派 2015款 1.8L 自动舒适版报价，真实车源图片/视频 - 瓜子二手车", "price": 2.63, "new_price": 13.58, "retention": 19.4, "mileage": 96200, "reg": "2015-03", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172095571497645.html", "disp": 1.8, "gearbox": "AT", "emission": "国四"}, {"brand": "别克", "model": "昂科威", "title": "二手别克 昂科威 2018款 20T 两驱豪华型报价，真实车源图片/视频 - 瓜子二手车", "price": 4.56, "new_price": 26.11, "retention": 17.5, "mileage": 65500, "reg": "2018-11", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c172086813112844.html", "disp": 1.5, "gearbox": "AT", "emission": "国五"}, {"brand": "江铃", "model": "域虎9", "title": "二手江铃 域虎9 2020款 2.0T自动柴油四驱舒享型报价，真实车源图片/视频 - 瓜子二手车", "price": 6.87, "new_price": 18.16, "retention": 37.8, "mileage": 73600, "reg": "2022-05", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c172053816127013.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "哈弗", "model": "哈弗H6", "title": "二手哈弗H6 2017款 红标 运动版 1.5T 自动两驱豪华型报价，真实车源图片/视频 - 瓜子二手车", "price": 2.52, "new_price": 13.04, "retention": 19.3, "mileage": 123800, "reg": "2016-12", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c172006915161773.html", "disp": 1.5, "gearbox": "AT", "emission": "国五"}, {"brand": "名爵", "model": "名爵ZS", "title": "二手名爵ZS 2020款 180DVVT 自动UP报价，真实车源图片/视频 - 瓜子二手车", "price": 4.06, "new_price": 9.99, "retention": 40.6, "mileage": 60700, "reg": "2021-01", "city": "德阳", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171986538913036.html", "disp": 1.5, "gearbox": "AT", "emission": "国六B"}, {"brand": "哈弗", "model": "哈弗H6", "title": "二手哈弗H6 2017款 蓝标 运动版 1.5T 手动两驱精英型报价，真实车源图片/视频 - 瓜子二手车", "price": 1.54, "new_price": 11.95, "retention": 12.9, "mileage": 127500, "reg": "2017-02", "city": "衢州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171984529304218.html", "disp": 1.5, "gearbox": "MT", "emission": "国五"}, {"brand": "福田", "model": "蒙派克E", "title": "二手福田 蒙派克E 2017款 2.0L新快运长轴4G63报价，真实车源图片/视频 - 瓜子二手车", "price": 1.92, "new_price": 8.27, "retention": 23.2, "mileage": 165800, "reg": "2018-03", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c171793029879564.html", "disp": 2.0, "gearbox": "MT", "emission": "国五"}, {"brand": "吉利", "model": "远景X1", "title": "【高保值】二手吉利汽车 远景X1 2017款 1.3L 自动玩家版报价，真实车源图片/视频 - 瓜子二手车", "price": 2.41, "new_price": 6.3, "retention": 38.2, "mileage": 45500, "reg": "2019-07", "city": "保定", "transfer": 1, "url": "https://www.guazi.com/car-detail/c171750975320338.html", "disp": 1.3, "gearbox": "AT", "emission": "国五"}, {"brand": "奥迪", "model": "奥迪A3", "title": "【高保值】二手奥迪A3 2015款 Sportback 35 TFSI 百万纪念智领型报价，真实车源图片/视频 - 瓜子二手车", "price": 3.85, "new_price": 24.81, "retention": 15.5, "mileage": 87200, "reg": "2015-12", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171683680116075.html", "disp": 1.4, "gearbox": "AT", "emission": "国五"}, {"brand": "起亚", "model": "起亚K3", "title": "【高保值】二手起亚K3 2016款 1.6L 自动GLS报价，真实车源图片/视频 - 瓜子二手车", "price": 3.07, "new_price": 12.93, "retention": 23.7, "mileage": 121800, "reg": "2017-01", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171674853486100.html", "disp": 1.6, "gearbox": "AT", "emission": "国四"}, {"brand": "奥迪", "model": "奥迪Q2L", "title": "二手奥迪Q2L 2023款 35TFSI 时尚动感型报价，真实车源图片/视频 - 瓜子二手车", "price": 10.72, "new_price": 25.78, "retention": 41.6, "mileage": 11000, "reg": "2024-01", "city": "青岛", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171669820230920.html", "disp": 1.5, "gearbox": "AT", "emission": "国六B"}, {"brand": "马自达", "model": "马自达3 昂克赛拉", "title": "【高保值】二手马自达3 昂克赛拉 2019款 云控版 三厢 2.0L 自动尊贵型 国VI报价，真实车源图片/视频 - 瓜子二手车", "price": 5.11, "new_price": 16.97, "retention": 30.1, "mileage": 132000, "reg": "2019-12", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c171559908129875.html", "disp": 2.0, "gearbox": "AT", "emission": "国六"}, {"brand": "丰田", "model": "赛那SIENNA", "title": "【原厂质保】二手丰田 赛那SIENNA 2026款 2.5L 双擎四驱尊贵版报价，真实车源图片/视频 - 瓜子二手车", "price": 31.41, "new_price": 39.16, "retention": 80.2, "mileage": 6000, "reg": "2026-02", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171518810338887.html", "disp": 2.5, "gearbox": "AT", "emission": "国六"}, {"brand": "奔驰", "model": "奔驰E级(进口)", "title": "二手奔驰E级(进口) 2023款 E 260 轿跑车报价，真实车源图片/视频 - 瓜子二手车", "price": 28.35, "new_price": 57.8, "retention": 49.0, "mileage": 61200, "reg": "2023-06", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171506344640037.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "长安", "model": "长安UNI-V", "title": "二手长安UNI-V 2022款 1.5T 运动版报价，真实车源图片/视频 - 瓜子二手车", "price": 6.55, "new_price": 13.49, "retention": 48.5, "mileage": 49700, "reg": "2023-02", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c171421010672906.html", "disp": 1.5, "gearbox": "AT", "emission": "国六B"}, {"brand": "哈弗", "model": "哈弗H6", "title": "二手哈弗H6 2021款 国潮版 1.5T 自动都市版报价，真实车源图片/视频 - 瓜子二手车", "price": 4.47, "new_price": 10.77, "retention": 41.5, "mileage": 91600, "reg": "2021-06", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c171274483190791.html", "disp": 1.5, "gearbox": "AT", "emission": "国六B"}, {"brand": "斯柯达", "model": "速派", "title": "二手斯柯达 速派 2016款 TSI280 DSG创行版报价，真实车源图片/视频 - 瓜子二手车", "price": 3.24, "new_price": 20.66, "retention": 15.7, "mileage": 150200, "reg": "2016-12", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c171067211151458.html", "disp": 1.4, "gearbox": "AT", "emission": "国五"}, {"brand": "本田", "model": "缤智", "title": "【高保值】二手本田 缤智 2016款 1.8L CVT两驱先锋型报价，真实车源图片/视频 - 瓜子二手车", "price": 4.41, "new_price": 16.74, "retention": 26.3, "mileage": 81300, "reg": "2017-07", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c170870748280164.html", "disp": 1.8, "gearbox": "AT", "emission": "国五"}, {"brand": "吉利", "model": "博越", "title": "【4S店直卖】二手吉利汽车 2022款 博越X 1.8TD DCT智尊型报价，真实车源图片/视频 - 瓜子二手车", "price": 5.6, "new_price": 14.46, "retention": 38.7, "mileage": 45500, "reg": "2022-02", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c170796444316813.html", "disp": 1.8, "gearbox": "AT", "emission": "国六B"}, {"brand": "宝马", "model": "宝马X4", "title": "二手宝马X4 2016款 xDrive20i M运动型报价，真实车源图片/视频 - 瓜子二手车", "price": 8.38, "new_price": 53.31, "retention": 15.7, "mileage": 146400, "reg": "2018-06", "city": "深圳", "transfer": 0, "url": "https://www.guazi.com/car-detail/c170650903209732.html", "disp": 2.0, "gearbox": "AT", "emission": "国五"}, {"brand": "丰田", "model": "汉兰达", "title": "二手丰田 汉兰达 2021款 2.0T 两驱豪华版 7座报价，真实车源图片/视频 - 瓜子二手车", "price": 12.06, "new_price": 31.54, "retention": 38.2, "mileage": 186800, "reg": "2021-06", "city": "青岛", "transfer": 0, "url": "https://www.guazi.com/car-detail/c170572119310361.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "别克", "model": "昂科威", "title": "二手别克 昂科威 2019款 20T 两驱精英型 国VI报价，真实车源图片/视频 - 瓜子二手车", "price": 5.2, "new_price": 21.76, "retention": 23.9, "mileage": 93700, "reg": "2019-11", "city": "衡阳", "transfer": 1, "url": "https://www.guazi.com/car-detail/c170430023149388.html", "disp": 1.5, "gearbox": "AT", "emission": "国六B"}, {"brand": "Jeep", "model": "指南者", "title": "二手Jeep 指南者 2017款 200TS 自动高性能四驱版报价，真实车源图片/视频 - 瓜子二手车", "price": 3.26, "new_price": 26.32, "retention": 12.4, "mileage": 187600, "reg": "2018-03", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c170323115322960.html", "disp": 2.4, "gearbox": "AT", "emission": "国五"}, {"brand": "捷达", "model": "捷达VS5", "title": "二手捷达VS5 2022款 280TSI 自动悦享型报价，真实车源图片/视频 - 瓜子二手车", "price": 5.06, "new_price": 11.41, "retention": 44.4, "mileage": 90200, "reg": "2023-05", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c170225396481514.html", "disp": 1.4, "gearbox": "AT", "emission": "国六B"}, {"brand": "比亚迪", "model": "宋", "title": "二手比亚迪 宋 2019款 1.5TI 手动智联越动型报价，真实车源图片/视频 - 瓜子二手车", "price": 2.54, "new_price": 10.21, "retention": 24.9, "mileage": 57300, "reg": "2018-11", "city": "汉中", "transfer": 0, "url": "https://www.guazi.com/car-detail/c170161556282197.html", "disp": 1.5, "gearbox": "MT", "emission": "国五"}, {"brand": "领克", "model": "领克03", "title": "二手领克03 2019款 03+ 2.0TD 自动驭风版报价，真实车源图片/视频 - 瓜子二手车", "price": 7.37, "new_price": 21.64, "retention": 34.1, "mileage": 77800, "reg": "2020-03", "city": "东莞", "transfer": 1, "url": "https://www.guazi.com/car-detail/c170055828183089.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "马自达", "model": "马自达3 昂克赛拉", "title": "二手马自达3 昂克赛拉 2017款 三厢 1.5L 手动舒适型 国V报价，真实车源图片/视频 - 瓜子二手车", "price": 4.19, "new_price": 12.29, "retention": 34.1, "mileage": 36600, "reg": "2019-04", "city": "衢州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c169863186336249.html", "disp": 1.5, "gearbox": "MT", "emission": "国五"}, {"brand": "哈弗", "model": "哈弗H2", "title": "二手哈弗H2 2018款 蓝标 1.5T 双离合两驱豪华型报价，真实车源图片/视频 - 瓜子二手车", "price": 2.98, "new_price": 11.76, "retention": 25.3, "mileage": 87200, "reg": "2018-08", "city": "吕梁", "transfer": 1, "url": "https://www.guazi.com/car-detail/c169815226502726.html", "disp": 1.5, "gearbox": "AT", "emission": "国五"}, {"brand": "马自达", "model": "阿特兹", "title": "【高保值】二手马自达 阿特兹 2015款 2.5L 蓝天运动版报价，真实车源图片/视频 - 瓜子二手车", "price": 3.69, "new_price": 21.75, "retention": 17.0, "mileage": 129200, "reg": "2016-03", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c169553856248102.html", "disp": 2.5, "gearbox": "AT", "emission": "国五"}, {"brand": "捷豹", "model": "捷豹XFL", "title": "二手捷豹XFL 2024款 2.0T P250 两驱尊享豪华版报价，真实车源图片/视频 - 瓜子二手车", "price": 19.67, "new_price": 47.88, "retention": 41.1, "mileage": 18000, "reg": "2025-06", "city": "长沙", "transfer": 0, "url": "https://www.guazi.com/car-detail/c169397043847721.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "奔驰", "model": "威霆", "title": "二手奔驰 威霆 2016款 2.0T 商务版报价，真实车源图片/视频 - 瓜子二手车", "price": 9.74, "new_price": 36.57, "retention": 26.6, "mileage": 122400, "reg": "2018-05", "city": "无锡", "transfer": 1, "url": "https://www.guazi.com/car-detail/c169219437341174.html", "disp": 2.0, "gearbox": "AT", "emission": "国五"}, {"brand": "斯柯达", "model": "晶锐", "title": "二手斯柯达 晶锐 2012款 1.6L Scout报价，真实车源图片/视频 - 瓜子二手车", "price": 1.7, "new_price": 12.62, "retention": 13.5, "mileage": 126600, "reg": "2014-07", "city": "厦门", "transfer": 2, "url": "https://www.guazi.com/car-detail/c169145787110493.html", "disp": 1.6, "gearbox": "AT", "emission": "国四"}, {"brand": "大众", "model": "一汽-大众CC", "title": "【4S店直卖】二手一汽-大众CC 2021款 猎装车 380TSI 猎心版报价，真实车源图片/视频 - 瓜子二手车", "price": 13.39, "new_price": 29.92, "retention": 44.8, "mileage": 56000, "reg": "2022-08", "city": "重庆", "transfer": 0, "url": "https://www.guazi.com/car-detail/c168510006912393.html", "disp": 2.0, "gearbox": "AT", "emission": "国六B"}, {"brand": "本田", "model": "杰德", "title": "二手本田 杰德 2020款 1.8L 自动舒适版报价，真实车源图片/视频 - 瓜子二手车", "price": 5.73, "new_price": 15.23, "retention": 37.6, "mileage": 82800, "reg": "2019-04", "city": "深圳", "transfer": 0, "url": "https://www.guazi.com/car-detail/c168194469120902.html", "disp": 1.8, "gearbox": "AT", "emission": "国五"}, {"brand": "奔驰", "model": "奔驰C级", "title": "二手奔驰C级 2017款 改款 C 180 L 时尚型运动版报价，真实车源图片/视频 - 瓜子二手车", "price": 8.22, "new_price": 35.46, "retention": 23.2, "mileage": 91300, "reg": "2017-06", "city": "曲靖", "transfer": 1, "url": "https://www.guazi.com/car-detail/c167990058148474.html", "disp": 1.6, "gearbox": "AT", "emission": "国五"}, {"brand": "日产", "model": "轩逸", "title": "【准新车】二手日产 轩逸 2024款 经典 1.6XE CVT舒适版报价，真实车源图片/视频 - 瓜子二手车", "price": 6.34, "new_price": 11.82, "retention": 53.6, "mileage": 9100, "reg": "2024-07", "city": "锦州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c167739310327007.html", "disp": 1.6, "gearbox": "AT", "emission": "国六"}, {"brand": "本田", "model": "飞度", "title": "二手本田 飞度 2018款 1.5L CVT舒适天窗版报价，真实车源图片/视频 - 瓜子二手车", "price": 4.75, "new_price": 9.34, "retention": 50.9, "mileage": 39300, "reg": "2019-04", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c167634869218886.html", "disp": 1.5, "gearbox": "AT", "emission": "国五"}, {"brand": "奔驰", "model": "奔驰GLA", "title": "二手奔驰GLA 2017款 GLA 220 4MATIC 时尚型报价，真实车源图片/视频 - 瓜子二手车", "price": 7.08, "new_price": 35.03, "retention": 20.2, "mileage": 106700, "reg": "2017-11", "city": "安阳", "transfer": 1, "url": "https://www.guazi.com/car-detail/c167455386649191.html", "disp": 2.0, "gearbox": "AT", "emission": "国五"}, {"brand": "奥迪", "model": "奥迪A3", "title": "二手奥迪A3 2014款 Limousine 35 TFSI 自动进取型报价，真实车源图片/视频 - 瓜子二手车", "price": 3.74, "new_price": 22.41, "retention": 16.7, "mileage": 122700, "reg": "2016-04", "city": "苏州", "transfer": 2, "url": "https://www.guazi.com/car-detail/c167041655446786.html", "disp": 1.4, "gearbox": "AT", "emission": "国五"}, {"brand": "宝马", "model": "宝马X3", "title": "二手宝马X3 2025款 xDrive30L 领先型 M运动套装报价，真实车源图片/视频 - 瓜子二手车", "price": 23.94, "new_price": 43.53, "retention": 55.0, "mileage": 24200, "reg": "2025-07", "city": "承德", "transfer": 0, "url": "https://www.guazi.com/car-detail/c167029908286185.html", "disp": 2.0, "gearbox": "AT", "emission": "国六"}, {"brand": "哈弗", "model": "哈弗H2s", "title": "二手哈弗H2s 2018款 红标 1.5T 双离合精英型报价，真实车源图片/视频 - 瓜子二手车", "price": 2.43, "new_price": 10.78, "retention": 22.5, "mileage": 128500, "reg": "2018-01", "city": "苏州", "transfer": 2, "url": "https://www.guazi.com/car-detail/c166683477961019.html", "disp": 1.5, "gearbox": "AT", "emission": "国五"}, {"brand": "斯巴鲁", "model": "森林人", "title": "二手斯巴鲁 森林人 2016款 2.0i 时尚导航版报价，真实车源图片/视频 - 瓜子二手车", "price": 5.6, "new_price": 27.19, "retention": 20.6, "mileage": 150500, "reg": "2016-08", "city": "大庆", "transfer": 1, "url": "https://www.guazi.com/car-detail/c166289714136391.html", "disp": 2.0, "gearbox": "AT", "emission": "国四"}, {"brand": "宝骏", "model": "宝骏510", "title": "二手宝骏510 2017款 1.5L 手动豪华型报价，真实车源图片/视频 - 瓜子二手车", "price": 2.16, "new_price": 7.6, "retention": 28.4, "mileage": 86800, "reg": "2018-09", "city": "重庆", "transfer": 2, "url": "https://www.guazi.com/car-detail/c165905422415757.html", "disp": 1.5, "gearbox": "MT", "emission": "国五"}, {"brand": "大众", "model": "朗逸", "title": "二手大众 朗逸 2023款 1.5L 自动得逸版报价，真实车源图片/视频 - 瓜子二手车", "price": 5.5, "new_price": 13.16, "retention": 41.8, "mileage": 53500, "reg": "2023-02", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c165762279797217.html", "disp": 1.5, "gearbox": "AT", "emission": "国六"}, {"brand": "坦克", "model": "坦克300", "title": "二手坦克300 2024款 2.0T 征服者报价，真实车源图片/视频 - 瓜子二手车", "price": 15.3, "new_price": 23.6, "retention": 64.8, "mileage": 37600, "reg": "2024-04", "city": "苏州", "transfer": 0, "url": "https://www.guazi.com/car-detail/c165217940129043.html", "disp": 2.0, "gearbox": "AT", "emission": "国六"}, {"brand": "大众", "model": "高尔夫", "title": "二手大众 高尔夫 2020款 280TSI DSG R-Line型报价，真实车源图片/视频 - 瓜子二手车", "price": 6.78, "new_price": 18.42, "retention": 36.8, "mileage": 91200, "reg": "2019-11", "city": "中山", "transfer": 2, "url": "https://www.guazi.com/car-detail/c165081480980806.html", "disp": 1.4, "gearbox": "AT", "emission": "国六"}, {"brand": "奔驰", "model": "奔驰GLK级", "title": "二手奔驰GLK级 2013款 改款 GLK 300 4MATIC 豪华型报价，真实车源图片/视频 - 瓜子二手车", "price": 5.58, "new_price": 60.74, "retention": 9.2, "mileage": 110500, "reg": "2014-09", "city": "苏州", "transfer": 2, "url": "https://www.guazi.com/car-detail/c164671981140870.html", "disp": 3.0, "gearbox": "AT", "emission": "国四"}, {"brand": "吉利", "model": "星瑞", "title": "二手吉利汽车 星瑞 2023款 1.5TD 昆仑版报价，真实车源图片/视频 - 瓜子二手车", "price": 7.4, "new_price": 12.48, "retention": 59.3, "mileage": 24200, "reg": "2024-04", "city": "沈阳", "transfer": 0, "url": "https://www.guazi.com/car-detail/c164254442232931.html", "disp": 1.5, "gearbox": "AT", "emission": "国六"}, {"brand": "凯迪拉克", "model": "凯迪拉克CT6", "title": "二手凯迪拉克CT6 2019款 40T 铂金版报价，真实车源图片/视频 - 瓜子二手车", "price": 32.58, "new_price": 76.09, "retention": 42.8, "mileage": 78600, "reg": "2019-05", "city": "苏州", "transfer": 1, "url": "https://www.guazi.com/car-detail/c164010512312605.html", "disp": 3.0, "gearbox": "AT", "emission": "国五"}, {"brand": "别克", "model": "昂科旗", "title": "二手别克 昂科旗 2020款 28T 两驱尊贵型报价，真实车源图片/视频 - 瓜子二手车", "price": 10.75, "new_price": 34.82, "retention": 30.9, "mileage": 87200, "reg": "2020-04", "city": "石家庄", "transfer": 1, "url": "https://www.guazi.com/car-detail/c163782921156540.html", "disp": 2.0, "gearbox": "AT", "emission": "国六"}], "logs": [{"time": "2026-09-19 12:03:56", "line": "fuel", "source": "guazi_md", "status": "success", "maps": 103, "fetched": 103, "parsed": 73, "new": 73, "updated": 0, "dup": 0, "err": 0, "missing": 0.0, "seconds": 0.3, "detail": "详情页成功 103; 已下架(404) 0; 风控拦截 0; 解析失败 0"}, {"time": "2026-09-19 12:03:56", "line": "ev", "source": "guazi_md", "status": "success", "maps": 103, "fetched": 103, "parsed": 30, "new": 30, "updated": 0, "dup": 0, "err": 0, "missing": 0.0, "seconds": 0.2, "detail": "详情页成功 103; 已下架(404) 0; 风控拦截 0; 解析失败 0"}]};
+const $ = id => document.getElementById(id);
+const charts = [];
+const PALETTE = ['#1f6feb','#0e9f6e','#e8710a','#7c5cd6','#c2410c','#0891b2','#b8860b','#be185d','#4d7c0f','#475569'];
+
+function mk(id, option) {
+  const el = $(id);
+  if (!el) return;
+  const c = echarts.init(el, null, {renderer: 'canvas'});
+  c.setOption(Object.assign({animationDuration: 520, textStyle: {fontFamily: 'Microsoft YaHei, PingFang SC, sans-serif'}}, option));
+  charts.push(c);
+}
+window.addEventListener('resize', () => charts.forEach(c => c.resize()));
+
+const AXIS = {
+  axisLine: {lineStyle: {color: '#d6dde8'}},
+  axisLabel: {color: '#5b6a7d', fontSize: 11},
+  splitLine: {lineStyle: {color: '#eef2f7'}},
+  axisTick: {show: false}
+};
+const TIP = {trigger: 'axis', axisPointer: {type: 'shadow'},
+  backgroundColor: 'rgba(22,32,46,.92)', borderWidth: 0, textStyle: {color: '#fff', fontSize: 12}};
+const TIP_ITEM = {trigger: 'item', backgroundColor: 'rgba(22,32,46,.92)', borderWidth: 0,
+  textStyle: {color: '#fff', fontSize: 12}};
+
+$('srcNote').textContent = D.source_note;
+$('genAt').textContent = D.generated_at;
+
+/* ---------------- KPI ---------------- */
+const K = D.kpi;
+$('kpis').innerHTML = [
+  ['车源总量', K.total, '条', `新能源 ${K.ev} · 燃油 ${K.fuel}`],
+  ['新能源', K.ev, '条', '电车：看电池与续航'],
+  ['燃油', K.fuel, '条', '油车：看车龄与里程'],
+  ['平均售价', K.avg_price, '万', `覆盖 ${K.brands} 个品牌`],
+  ['平均保值率', K.avg_retention != null ? (K.avg_retention * 100).toFixed(1) : '—', '%', '售价 ÷ 新车指导价'],
+  ['覆盖城市', K.cities, '个', '真实抓取自目标平台'],
+].map(([l, v, u, s], i) => `<div class="kpi ${i === 1 ? 'ev' : i === 2 ? 'fuel' : ''}">
+    <div class="v">${v == null ? '—' : v}${u === '%' ? '<small>%</small>' : u ? '<small>' + u + '</small>' : ''}</div>
+    <div class="l">${l}</div><div class="s">${s}</div></div>`).join('');
+
+/* ---------------- 油电对比 ---------------- */
+$('cmp').innerHTML = D.compare.map(r => `<div class="cmprow">
+  <div class="cl">${r.label}</div><div class="cv ev">${r.ev}</div><div class="cv fuel">${r.fuel}</div></div>`).join('');
+
+const evRet = D.ev.avg_retention != null ? +(D.ev.avg_retention * 100).toFixed(1) : 0;
+const fuRet = D.fuel.avg_retention != null ? +(D.fuel.avg_retention * 100).toFixed(1) : 0;
+const evP = D.ev.avg_price || 0, fuP = D.fuel.avg_price || 0;
+mk('c_cmp', {
+  tooltip: TIP,
+  legend: {data: ['平均保值率(%)', '平均售价(万元)'], bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}},
+  grid: {left: 52, right: 20, top: 24, bottom: 44},
+  xAxis: Object.assign({type: 'category', data: ['新能源', '燃油']}, AXIS),
+  yAxis: Object.assign({type: 'value'}, AXIS),
+  series: [
+    {name: '平均保值率(%)', type: 'bar', data: [evRet, fuRet], barWidth: 34,
+      itemStyle: {borderRadius: [6, 6, 0, 0], color: p => p.dataIndex ? '#f0a35e' : '#4cc79a'},
+      label: {show: true, position: 'top', formatter: '{c}%', color: '#41506a', fontSize: 11}},
+    {name: '平均售价(万元)', type: 'line', data: [evP, fuP], symbolSize: 9,
+      lineStyle: {width: 3, color: '#1f6feb'}, itemStyle: {color: '#1f6feb'},
+      label: {show: true, position: 'bottom', formatter: '{c}万', color: '#1f6feb', fontSize: 11}}
+  ]
+});
+
+/* ---------------- 通用图表工厂 ---------------- */
+function hbar(id, rows, color, unit, dec) {
+  if (!rows || !rows.length) { $(id).innerHTML = '<div class="empty">暂无足够样本</div>'; return; }
+  const names = rows.map(r => r.name).reverse();
+  const vals = rows.map(r => r.avg ?? r.n).reverse();
+  const ns = rows.map(r => r.n).reverse();
+  mk(id, {
+    tooltip: Object.assign({}, TIP, {formatter: p => `${p[0].name}<br/>${p[0].marker}${unit}：<b>${p[0].value}</b>　样本 ${ns[p[0].dataIndex]} 条`}),
+    grid: {left: 96, right: 52, top: 10, bottom: 14},
+    xAxis: Object.assign({type: 'value'}, AXIS),
+    yAxis: Object.assign({type: 'category', data: names}, AXIS, {splitLine: {show: false}}),
+    series: [{type: 'bar', data: vals, barWidth: '58%',
+      itemStyle: {borderRadius: [0, 5, 5, 0], color: color},
+      label: {show: true, position: 'right', fontSize: 11, color: '#41506a',
+        formatter: p => (dec ? (+p.value).toFixed(dec) : p.value)}}]
+  });
+}
+
+function distBar(id, rows, color) {
+  if (!rows || !rows.length || !rows.some(r => r.n)) { $(id).innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  mk(id, {
+    tooltip: TIP,
+    grid: {left: 46, right: 16, top: 24, bottom: 46},
+    xAxis: Object.assign({type: 'category', data: rows.map(r => r.name),
+      axisLabel: {color: '#5b6a7d', fontSize: 10.5, interval: 0, rotate: rows.length > 6 ? 26 : 0}}, AXIS),
+    yAxis: Object.assign({type: 'value', name: '车源数', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+    series: [{type: 'bar', data: rows.map(r => r.n), barWidth: '56%',
+      itemStyle: {borderRadius: [5, 5, 0, 0],
+        color: {type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{offset: 0, color: color[0]}, {offset: 1, color: color[1]}]}},
+      label: {show: true, position: 'top', fontSize: 11, color: '#41506a'}}]
+  });
+}
+
+function donut(id, rows, unit) {
+  if (!rows || !rows.length) { $(id).innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  mk(id, {
+    tooltip: Object.assign({}, TIP_ITEM, {formatter: p => `${p.marker}${p.name}<br/>${unit}：<b>${p.value}</b>（${p.percent}%）`}),
+    legend: {bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}, itemWidth: 10, itemHeight: 10},
+    color: PALETTE,
+    series: [{type: 'pie', radius: ['42%', '68%'], center: ['50%', '44%'], avoidLabelOverlap: true,
+      itemStyle: {borderColor: '#fff', borderWidth: 2},
+      label: {show: true, formatter: '{b}\n{c}', fontSize: 10.5, color: '#41506a'},
+      labelLine: {length: 8, length2: 8},
+      data: rows.map(r => ({name: r.name, value: r.n}))}]
+  });
+}
+
+/* ---------------- 新能源 ---------------- */
+hbar('c_ev_ret', D.ev.brand_retention_rank, '#0e9f6e', '保值率', 1);
+hbar('c_ev_bp', D.ev.brand_price_rank, '#1f6feb', '均价(万)', 2);
+
+const sc = D.ev.range_price_scatter || [];
+if (sc.length) {
+  mk('c_ev_scatter', {
+    tooltip: Object.assign({}, TIP_ITEM, {formatter: p => `<b>${p.value[2]} ${p.value[3]}</b><br/>纯电续航：${p.value[0]} km<br/>售价：${p.value[1]} 万`}),
+    grid: {left: 52, right: 18, top: 16, bottom: 44},
+    xAxis: Object.assign({type: 'value', name: '纯电续航 (km)', nameLocation: 'middle', nameGap: 26,
+      nameTextStyle: {color: '#5b6a7d', fontSize: 11}}, AXIS),
+    yAxis: Object.assign({type: 'value', name: '售价 (万元)', nameTextStyle: {color: '#5b6a7d', fontSize: 11}}, AXIS),
+    series: [{type: 'scatter', data: sc, symbolSize: 9,
+      itemStyle: {color: 'rgba(14,159,110,.66)', borderColor: '#0e9f6e', borderWidth: 1},
+      emphasis: {itemStyle: {color: '#0e9f6e', borderWidth: 2}}}]
+  });
+} else {
+  $('c_ev_scatter').innerHTML = '<div class="empty">样本中未提取到纯电续航数据<br/><span style="font-size:11px">增程/插混车型的综合续航已按口径剔除</span></div>';
+}
+
+const bat = D.ev.battery_price || [];
+if (bat.length) {
+  mk('c_ev_bat', {
+    tooltip: TIP,
+    legend: {data: ['均价(万元)', 'SOH均值(%)'], bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}},
+    grid: {left: 50, right: 52, top: 20, bottom: 46},
+    xAxis: Object.assign({type: 'category', data: bat.map(b => b.name),
+      axisLabel: {color: '#5b6a7d', fontSize: 10, interval: 0, rotate: bat.length > 3 ? 20 : 0}}, AXIS),
+    yAxis: [
+      Object.assign({type: 'value', name: '万元', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+      Object.assign({type: 'value', name: 'SOH%', max: 100, nameTextStyle: {color: '#8b98a8', fontSize: 11}},
+        AXIS, {splitLine: {show: false}})
+    ],
+    series: [
+      {name: '均价(万元)', type: 'bar', data: bat.map(b => b.avg), barWidth: '44%',
+        itemStyle: {borderRadius: [5, 5, 0, 0], color: '#0e9f6e'},
+        label: {show: true, position: 'top', fontSize: 11, color: '#41506a'}},
+      {name: 'SOH均值(%)', type: 'line', yAxisIndex: 1, symbolSize: 8,
+        data: bat.map(() => D.ev.health_avg ? +D.ev.health_avg.toFixed(1) : null),
+        lineStyle: {width: 2.5, type: 'dashed', color: '#b8860b'},
+        itemStyle: {color: '#b8860b'},
+        label: {show: true, position: 'top', fontSize: 11, color: '#b8860b', formatter: '{c}%'}}
+    ]
+  });
+} else {
+  $('c_ev_bat').innerHTML = '<div class="empty">样本中未披露电池类型</div>';
+}
+
+/* ---------------- 燃油 ---------------- */
+distBar('c_fu_price', D.fuel.price_dist, ['#f5a95f', '#e8710a']);
+hbar('c_fu_bp', D.fuel.brand_price_rank, '#e8710a', '均价(万)', 2);
+
+const hm = D.fuel.heatmap || {x: [], y: [], data: []};
+if (hm.data && hm.data.length) {
+  const maxN = Math.max(...hm.data.map(d => d[2]));
+  mk('c_fu_heat', {
+    tooltip: Object.assign({}, TIP_ITEM,
+      {formatter: p => `${hm.y[p.value[1]]} · ${hm.x[p.value[0]]}<br/>车源数：<b>${p.value[2]}</b>`}),
+    grid: {left: 74, right: 22, top: 14, bottom: 62},
+    xAxis: Object.assign({type: 'category', data: hm.x,
+      axisLabel: {color: '#5b6a7d', fontSize: 10, interval: 0, rotate: 24}}, AXIS, {splitLine: {show: false}}),
+    yAxis: Object.assign({type: 'category', data: hm.y,
+      axisLabel: {color: '#5b6a7d', fontSize: 10.5}}, AXIS, {splitLine: {show: false}}),
+    visualMap: {min: 0, max: maxN, calculable: false, orient: 'horizontal', left: 'center', bottom: 4,
+      itemWidth: 11, itemHeight: 90, textStyle: {color: '#5b6a7d', fontSize: 10.5},
+      inRange: {color: ['#fdf3e7', '#f7c88f', '#ef9a4b', '#d96f10', '#a5500a']}},
+    series: [{type: 'heatmap', data: hm.data,
+      itemStyle: {borderColor: '#fff', borderWidth: 2, borderRadius: 3},
+      label: {show: true, fontSize: 10.5, color: '#3c3c3c', formatter: p => p.value[2] || ''}}]
+  });
+} else {
+  $('c_fu_heat').innerHTML = '<div class="empty">样本中车龄或里程缺失，无法构建热力图</div>';
+}
+
+const em = (D.fuel.emission_dist || []).slice(0, 6);
+const gb = (D.fuel.gearbox_dist || []).slice(0, 4);
+if (em.length || gb.length) {
+  mk('c_fu_emis', {
+    tooltip: TIP,
+    legend: {data: ['排放标准', '变速箱'], bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}},
+    grid: {left: 48, right: 18, top: 22, bottom: 52},
+    xAxis: Object.assign({type: 'category', data: em.map(e => e.name),
+      axisLabel: {color: '#5b6a7d', fontSize: 10.5, interval: 0, rotate: em.length > 4 ? 22 : 0}}, AXIS),
+    yAxis: Object.assign({type: 'value', name: '车源数', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+    series: [
+      {name: '排放标准', type: 'bar', data: em.map(e => e.n), barWidth: '46%',
+        itemStyle: {borderRadius: [5, 5, 0, 0], color: '#e8710a'},
+        label: {show: true, position: 'top', fontSize: 11, color: '#41506a'}},
+      {name: '变速箱', type: 'line', symbolSize: 8, smooth: true,
+        data: gb.map(g => g.n),
+        lineStyle: {width: 2.5, color: '#7c5cd6'}, itemStyle: {color: '#7c5cd6'}}
+    ]
+  });
+} else {
+  $('c_fu_emis').innerHTML = '<div class="empty">暂无数据</div>';
+}
+
+/* ---------------- 保值率曲线 ---------------- */
+function curve(id, rows, color) {
+  if (!rows || !rows.length) { $(id).innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  mk(id, {
+    tooltip: Object.assign({}, TIP, {formatter: p => `车龄 <b>${p[0].axisValue} 年</b><br/>${p[0].marker}平均保值率：<b>${p[0].value}%</b>`}),
+    grid: {left: 48, right: 22, top: 22, bottom: 40},
+    xAxis: Object.assign({type: 'category', data: rows.map(r => r.age),
+      axisLabel: {color: '#5b6a7d', fontSize: 11}}, AXIS, {boundaryGap: false}),
+    yAxis: Object.assign({type: 'value', name: '保值率 %', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+    series: [{type: 'line', data: rows.map(r => r.rate), smooth: true, symbolSize: 8,
+      lineStyle: {width: 3, color: color},
+      itemStyle: {color: color, borderColor: '#fff', borderWidth: 2},
+      areaStyle: {color: {type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+        colorStops: [{offset: 0, color: color + '55'}, {offset: 1, color: color + '05'}]}},
+      label: {show: true, fontSize: 11, color: '#41506a', formatter: '{c}%'}}]
+  });
+}
+
+mk('c_curve', {
+  tooltip: TIP,
+  legend: {data: ['新能源', '燃油'], bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}},
+  grid: {left: 48, right: 22, top: 22, bottom: 46},
+  xAxis: Object.assign({type: 'category',
+    data: [...new Set([...(D.ev.age_retention || []), ...(D.fuel.age_retention || [])].map(r => r.age))].sort((a, b) => a - b),
+    name: '车龄 (年)', nameLocation: 'middle', nameGap: 26, nameTextStyle: {color: '#5b6a7d', fontSize: 11},
+    axisLabel: {color: '#5b6a7d', fontSize: 11}}, AXIS, {boundaryGap: false}),
+  yAxis: Object.assign({type: 'value', name: '保值率 %', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+  series: [
+    {name: '新能源', type: 'line', smooth: true, symbolSize: 7, connectNulls: true,
+      data: (D.ev.age_retention || []).map(r => r.rate),
+      lineStyle: {width: 3, color: '#0e9f6e'}, itemStyle: {color: '#0e9f6e'}},
+    {name: '燃油', type: 'line', smooth: true, symbolSize: 7, connectNulls: true,
+      data: (D.fuel.age_retention || []).map(r => r.rate),
+      lineStyle: {width: 3, color: '#e8710a'}, itemStyle: {color: '#e8710a'}}
+  ]
+});
+
+/* 车龄分布：两条线并排 */
+const ageLabels = D.fuel.age_dist.map(r => r.name);
+const ageMap = (rows) => Object.fromEntries(rows.map(r => [r.name, r.n]));
+const evAge = ageMap(D.ev.age_dist), fuAge = ageMap(D.fuel.age_dist);
+mk('c_age', {
+  tooltip: TIP,
+  legend: {data: ['新能源', '燃油'], bottom: 0, textStyle: {color: '#5b6a7d', fontSize: 11}},
+  grid: {left: 48, right: 20, top: 20, bottom: 52},
+  xAxis: Object.assign({type: 'category', data: ageLabels,
+    axisLabel: {color: '#5b6a7d', fontSize: 10.5, interval: 0, rotate: 22}}, AXIS),
+  yAxis: Object.assign({type: 'value', name: '车源数', nameTextStyle: {color: '#8b98a8', fontSize: 11}}, AXIS),
+  series: [
+    {name: '新能源', type: 'bar', data: ageLabels.map(l => evAge[l] || 0), barWidth: '34%',
+      itemStyle: {borderRadius: [4, 4, 0, 0], color: '#0e9f6e'}},
+    {name: '燃油', type: 'bar', data: ageLabels.map(l => fuAge[l] || 0), barWidth: '34%',
+      itemStyle: {borderRadius: [4, 4, 0, 0], color: '#e8710a'}}
+  ]
+});
+
+/* ---------------- 明细表 ---------------- */
+const COLS = {
+  ev: [['品牌','brand'],['车型','model'],['售价(万)','price'],['新车指导价(万)','new_price'],
+       ['保值率','retention'],['上牌','reg'],['里程(km)','mileage'],['城市','city'],
+       ['纯电续航(km)','range'],['口径','range_std'],['电池','battery'],['SOH(%)','soh'],['过户','transfer']],
+  fuel: [['品牌','brand'],['车型','model'],['售价(万)','price'],['新车指导价(万)','new_price'],
+         ['保值率','retention'],['上牌','reg'],['里程(km)','mileage'],['城市','city'],
+         ['排量(L)','disp'],['变速箱','gearbox'],['排放','emission'],['过户','transfer']]
+};
+let line = 'ev';
+const fmtN = v => (v == null || v === '') ? '—' : Number(v).toLocaleString();
+const fmtF = (v, d) => (v == null || v === '') ? '—' : Number(v).toFixed(d);
+
+function fillSelects() {
+  const rows = D[line + '_rows'];
+  const bs = [...new Set(rows.map(r => r.brand))].filter(b => b && b !== '—').sort();
+  const cs = [...new Set(rows.map(r => r.city))].filter(c => c && c !== '—').sort();
+  $('brandSel').innerHTML = '<option value="">全部品牌</option>' + bs.map(b => `<option>${b}</option>`).join('');
+  $('citySel').innerHTML = '<option value="">全部城市</option>' + cs.map(c => `<option>${c}</option>`).join('');
+}
+
+function renderTable() {
+  const rows = D[line + '_rows'];
+  const kw = $('kw').value.trim().toLowerCase();
+  const brand = $('brandSel').value, city = $('citySel').value, sort = $('sortSel').value;
+  let list = rows.filter(r => (!kw || (r.brand + r.model + r.city + r.title).toLowerCase().includes(kw))
+    && (!brand || r.brand === brand) && (!city || r.city === city));
+  const key = sort === 'retention' ? 'retention' : sort === 'mileage' ? 'mileage' : 'price';
+  list = list.slice().sort((a, b) => (b[key] ?? -1) - (a[key] ?? -1));
+
+  $('thead').innerHTML = '<tr>' + COLS[line].map(([t]) => `<th>${t}</th>`).join('') + '<th>原始车源</th></tr>';
+  if (!list.length) {
+    $('tbody').innerHTML = `<tr><td colspan="${COLS[line].length + 1}"><div class="empty">没有符合条件的车源</div></td></tr>`;
+  } else {
+    $('tbody').innerHTML = list.map(r => '<tr>' + COLS[line].map(([, k]) => {
+      let v = r[k];
+      if (k === 'retention') v = v == null ? '—' : v.toFixed(1) + '%';
+      else if (k === 'mileage') v = fmtN(v);
+      else if (k === 'price' || k === 'new_price') v = fmtF(v, 2);
+      else if (k === 'soh') v = fmtF(v, 1);
+      else if (k === 'disp') v = fmtF(v, 1);
+      else if (k === 'range') v = fmtN(v);
+      const cls = (k === 'price' || k === 'mileage' || k === 'new_price' || k === 'soh' || k === 'range') ? ' class="num"' : '';
+      return `<td${cls}>${v == null || v === '' ? '—' : v}</td>`;
+    }).join('') + `<td>${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">查看 ↗</a>` : '—'}</td>` + '</tr>').join('');
+  }
+  $('shown').textContent = `显示 ${list.length} / ${rows.length} 条`;
+}
+
+$('n_ev').textContent = '(' + D.ev_rows.length + ')';
+$('n_fuel').textContent = '(' + D.fuel_rows.length + ')';
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  t.classList.add('on'); line = t.dataset.line;
+  $('kw').value = ''; fillSelects(); renderTable();
+});
+$('kw').oninput = renderTable;
+$('brandSel').onchange = renderTable;
+$('citySel').onchange = renderTable;
+$('sortSel').onchange = renderTable;
+fillSelects(); renderTable();
+
+/* ---------------- 数据质量 ---------------- */
+function quality(id, rows) {
+  $(id).innerHTML = rows.map(q => {
+    const cls = q.rate >= 90 ? '' : (q.rate >= 50 ? 'mid' : 'low');
+    return `<div class="qi"><div class="qn" title="${q.label}">${q.label}</div>
+      <div class="qt"><div class="qf ${cls}" style="width:${Math.max(q.rate, 1.2)}%"></div></div>
+      <div class="qv">${q.rate}%</div></div>`;
+  }).join('');
+}
+quality('q_ev', D.ev.field_completeness);
+quality('q_fuel', D.fuel.field_completeness);
+
+$('logs').innerHTML = D.logs.map(l => {
+  const st = l.status === 'success' ? '<span class="ok">成功</span>'
+    : l.status === 'partial' ? '<span class="warn">部分</span>' : '<span class="bad">失败</span>';
+  return `<tr><td>${l.time}</td><td>${l.line === 'ev' ? '新能源' : l.line === 'fuel' ? '燃油' : '双线'}</td>
+    <td>${l.source}</td><td>${st}</td><td class="num">${l.maps}</td><td class="num">${l.fetched}</td>
+    <td class="num">${l.parsed}</td><td class="num">${l.new}</td><td class="num">${l.updated}</td>
+    <td class="num">${l.dup}</td><td class="num">${l.err}</td><td class="num">${l.missing}%</td>
+    <td class="num">${l.seconds ?? '—'}</td>
+    <td style="white-space:normal;max-width:420px;color:#5b6a7d;font-size:11.5px">${l.detail || '—'}</td></tr>`;
+}).join('') || '<tr><td colspan="14"><div class="empty">暂无采集日志</div></td></tr>';
+</script>
+</body>
+</html>
